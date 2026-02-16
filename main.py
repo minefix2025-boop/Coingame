@@ -102,7 +102,6 @@ dp = Dispatcher(storage=storage)
 
 # ---------------- ФУНКЦИИ ДЛЯ РАБОТЫ С ФАЙЛАМИ ----------------
 def save_data():
-    """Сохранение всех данных в файл"""
     try:
         data = {
             "user_balances": {str(k): v for k, v in user_balances.items()},
@@ -129,14 +128,12 @@ def save_data():
 
 
 def load_data():
-    """Загрузка всех данных из файла"""
     global user_balances, daily_used, ranks, user_accelerators, mine_data
     global business_data, user_bank, promo_codes, user_profiles
     global user_donations, user_premium, user_mini_settings
 
     if not os.path.exists(DATA_FILE):
         logger.info("📁 Файл данных не найден, создаем новый")
-        # Создаем пустой файл
         save_data()
         return False
 
@@ -182,7 +179,6 @@ def load_data():
 
 # ---------------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------------
 def ensure_user(u_id: int):
-    """Гарантирует, что пользователь есть во всех словарях"""
     if u_id not in user_balances:
         user_balances[u_id] = START_BALANCE
     if u_id not in user_accelerators:
@@ -575,7 +571,7 @@ async def cmd_id(message: Message):
         )
 
 
-# ---------------- КОМАНДА /mini ----------------
+# ---------------- КОМАНДА /mini (ИСПРАВЛЕННАЯ) ----------------
 @dp.message(Command("mini"))
 async def cmd_mini(message: Message):
     user_id = message.from_user.id
@@ -669,7 +665,7 @@ async def cmd_start(message: Message):
     save_data()
 
 
-# ---------------- КОМАНДА /help ----------------
+# ---------------- КОМАНДА /help (ИСПРАВЛЕННАЯ - убраны все проблемные теги) ----------------
 @dp.message(Command("help"))
 async def cmd_help(message: Message):
     help_text = (
@@ -1054,7 +1050,7 @@ async def cmd_buy_deluxe(message: Message):
     )
 
 
-# ---------------- КОМАНДА /donate_history ----------------
+# ---------------- КОМАНДА /donate_history (ИСПРАВЛЕННАЯ) ----------------
 @dp.message(Command("donate_history"))
 async def cmd_donate_history(message: Message):
     user_id = message.from_user.id
@@ -1083,12 +1079,12 @@ async def cmd_donate_history(message: Message):
         text += f"   Дата: {tx['timestamp'][:10]} {status}\n\n"
 
     text += "🔹 ДЛЯ ВОЗВРАТА ЗВЁЗД ИСПОЛЬЗУЙ:\n"
-    text += "<code>/refund код_транзакции</code>"
+    text += "/refund код_транзакции"
 
     await message.answer(text, reply_markup=get_main_reply_keyboard())
 
 
-# ---------------- КОМАНДА /refund ----------------
+# ---------------- КОМАНДА /refund (ИСПРАВЛЕННАЯ) ----------------
 @dp.message(Command("refund"))
 async def cmd_refund(message: Message):
     user_id = message.from_user.id
@@ -1098,7 +1094,7 @@ async def cmd_refund(message: Message):
     if len(args) != 2:
         await message.answer(
             "💳 <b>ВОЗВРАТ ЗВЁЗД</b>\n\n"
-            "Используй: /refund <код_транзакции>\n"
+            "Используй: /refund код_транзакции\n"
             "Код транзакции можно найти в /donate_history\n\n"
             "Пример: /refund 12345678901234567890\n\n"
             "⚠️ ВНИМАНИЕ:\n"
@@ -2267,7 +2263,6 @@ async def callback_mini_handler(callback: CallbackQuery):
 
 # ---------------- ФОНОВЫЕ ЗАДАЧИ ----------------
 async def background_tasks():
-    """Фоновые задачи для обновления рудника и бизнеса"""
     while True:
         try:
             now = datetime.now()
@@ -2296,7 +2291,7 @@ async def background_tasks():
                     else:
                         business["last_collect"] = now
 
-            # Автосохранение раз в 5 минут
+            # Автосохранение
             if random.random() < 0.0167:
                 save_data()
 
@@ -2306,16 +2301,30 @@ async def background_tasks():
             await asyncio.sleep(1)
 
 
+# ---------------- ЗАГЛУШКА ПОРТА ДЛЯ RENDER ----------------
+async def start_dummy_server():
+    """Заглушка порта для Render"""
+    try:
+        from aiohttp import web
+        app = web.Application()
+        runner = web.AppRunner(app)
+        await runner.setup()
+        port = int(os.getenv('PORT', 10000))
+        site = web.TCPSite(runner, '0.0.0.0', port)
+        await site.start()
+        logger.info(f"🌐 Заглушка порта {port} запущена для Render")
+    except Exception as e:
+        logger.error(f"❌ Ошибка запуска заглушки порта: {e}")
+
+
 # ---------------- ТИХИЙ ПИНГ ДЛЯ RENDER ----------------
 async def silent_ping():
-    """Тихий пинг без отправки сообщений - только для Render"""
+    """Тихий пинг без отправки сообщений"""
     while True:
         try:
-            # Просто получаем информацию о боте (легкий запрос)
             me = await bot.get_me()
             logger.info(f"💚 Тихий пинг: бот @{me.username} активен")
             
-            # Сохраняем данные раз в 10 минут
             if random.random() < 0.1:
                 save_data()
                 
@@ -2325,11 +2334,10 @@ async def silent_ping():
             await asyncio.sleep(60)
 
 
-# ---------------- ПРИВЕТСТВЕННОЕ СООБЩЕНИЕ ПРИ ЗАПУСКЕ ----------------
+# ---------------- ПРИВЕТСТВЕННОЕ СООБЩЕНИЕ ----------------
 async def send_startup_message():
-    """Отправляет ОДНО сообщение при запуске"""
+    """Отправляет одно сообщение при запуске"""
     try:
-        # Пробуем отправить сообщение
         chat = await bot.get_chat(YOUR_USERNAME)
         await bot.send_message(
             chat_id=chat.id,
@@ -2346,24 +2354,19 @@ async def send_startup_message():
 
 # ---------------- ЗАПУСК ----------------
 async def main():
-    # Загружаем данные
     load_data()
     
-    # Запускаем ТИХИЙ пинг (без спама)
-    asyncio.create_task(silent_ping())
-    
-    # Отправляем ОДНО сообщение при запуске
-    asyncio.create_task(send_startup_message())
-    
-    # Запускаем фоновые задачи
+    # Запускаем все задачи
     asyncio.create_task(background_tasks())
+    asyncio.create_task(silent_ping())
+    asyncio.create_task(start_dummy_server())  # 👈 Заглушка порта для Render
+    asyncio.create_task(send_startup_message())  # 👈 Одно приветственное сообщение
     
     logger.info(f"✅ БОТ ЗАПУЩЕН! @{(await bot.me()).username}")
     logger.info("✅ Режим: ТИХИЙ (без минутных сообщений)")
     print(f"✅ БОТ ЗАПУЩЕН! @{(await bot.me()).username}")
     print("✅ Режим: ТИХИЙ (без минутных сообщений)")
 
-    # Запускаем polling
     await dp.start_polling(bot)
 
 
