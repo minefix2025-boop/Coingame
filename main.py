@@ -2155,9 +2155,60 @@ async def callback_mini_handler(callback: CallbackQuery):
     data = callback.data
     user_id = callback.from_user.id
 
-    if data.startswith("mini_open_"):
-        parts = data.split("_")
-        game_id = "_".join(parts[2:-1])
+    # Парсим данные
+    parts = data.split("_")
+    action = parts[1]  # open, bomb, empty, cashout
+    
+    if action == "cashout":
+        # Формат: mini_cashout_gameid
+        game_id = "_".join(parts[2:])
+        
+        if game_id not in mini_games:
+            await callback.message.edit_text("❌ Игра не найдена.")
+            await callback.answer()
+            return
+
+        state = mini_games[game_id]
+
+        if state.get('lost', False):
+            await callback.message.edit_text("❌ Игра уже завершена.")
+            await callback.answer()
+            return
+
+        if state['user_id'] != user_id:
+            await callback.answer("❌ Это не ваша игра!", show_alert=True)
+            return
+
+        win_amount = int(state['bet'] * state['multiplier'])
+
+        if not state['infinite_user']:
+            add_balance(user_id, win_amount)
+            add_xp(user_id, win_amount // 50)
+
+        all_opened = state['opened'].copy()
+        all_opened.update(state['bombs'])
+
+        keyboard = create_mini_keyboard(all_opened, state['bombs'], game_id)
+
+        await callback.message.edit_text(
+            f"🏆 ВЫ ЗАБРАЛИ ВЫИГРЫШ!\n\n"
+            f"Открыто клеток: {state['hits']}\n"
+            f"Множитель: {state['multiplier']:.2f}x\n"
+            f"Выигрыш: {win_amount:,} монет\n"
+            f"Баланс: {format_balance(user_id)}",
+            reply_markup=keyboard
+        )
+
+        del mini_games[game_id]
+        await callback.answer()
+        save_data()
+        return
+    
+    elif action == "open":
+        # Формат: mini_open_gameid_cellid
+        # Собираем game_id (все части между mini_open и последним числом)
+        game_parts = parts[2:-1]
+        game_id = "_".join(game_parts)
         cell_idx = int(parts[-1])
 
         if game_id not in mini_games:
@@ -2217,49 +2268,6 @@ async def callback_mini_handler(callback: CallbackQuery):
         )
         await callback.answer()
 
-    elif data.startswith("mini_cashout_"):
-        game_id = "_".join(data.split("_")[2:])
-
-        if game_id not in mini_games:
-            await callback.message.edit_text("❌ Игра не найдена.")
-            await callback.answer()
-            return
-
-        state = mini_games[game_id]
-
-        if state.get('lost', False):
-            await callback.message.edit_text("❌ Игра уже завершена.")
-            await callback.answer()
-            return
-
-        if state['user_id'] != user_id:
-            await callback.answer("❌ Это не ваша игра!", show_alert=True)
-            return
-
-        win_amount = int(state['bet'] * state['multiplier'])
-
-        if not state['infinite_user']:
-            add_balance(user_id, win_amount)
-            add_xp(user_id, win_amount // 50)
-
-        all_opened = state['opened'].copy()
-        all_opened.update(state['bombs'])
-
-        keyboard = create_mini_keyboard(all_opened, state['bombs'], game_id)
-
-        await callback.message.edit_text(
-            f"🏆 ВЫ ЗАБРАЛИ ВЫИГРЫШ!\n\n"
-            f"Открыто клеток: {state['hits']}\n"
-            f"Множитель: {state['multiplier']:.2f}x\n"
-            f"Выигрыш: {win_amount:,} монет\n"
-            f"Баланс: {format_balance(user_id)}",
-            reply_markup=keyboard
-        )
-
-        del mini_games[game_id]
-        await callback.answer()
-        save_data()
-
 
 # ---------------- ФОНОВЫЕ ЗАДАЧИ ----------------
 async def background_tasks():
@@ -2307,6 +2315,13 @@ async def start_dummy_server():
     try:
         from aiohttp import web
         app = web.Application()
+        
+        async def health_check(request):
+            return web.Response(text="Bot is running!")
+            
+        app.router.add_get('/', health_check)
+        app.router.add_get('/health', health_check)
+        
         runner = web.AppRunner(app)
         await runner.setup()
         port = int(os.getenv('PORT', 10000))
@@ -2338,18 +2353,16 @@ async def silent_ping():
 async def send_startup_message():
     """Отправляет одно сообщение при запуске"""
     try:
-        chat = await bot.get_chat(YOUR_USERNAME)
         await bot.send_message(
-            chat_id=chat.id,
+            chat_id=YOUR_USERNAME,
             text=f"🚀 <b>БОТ ЗАПУЩЕН!</b>\n\n"
                  f"Время: {datetime.now().strftime('%H:%M:%S')}\n"
                  f"Статус: ✅ Активен\n\n"
-                 f"<i>Режим: тихий (без минутных сообщений)</i>"
+                 f"<i>Все команды работают!</i>"
         )
         logger.info(f"📨 Отправлено приветственное сообщение для {YOUR_USERNAME}")
     except Exception as e:
         logger.error(f"❌ Не могу отправить сообщение для {YOUR_USERNAME}: {e}")
-        logger.info(f"💡 Напиши боту @CoinTGGamebot от @RobloxMinePump и нажми START")
 
 
 # ---------------- ЗАПУСК ----------------
@@ -2359,13 +2372,12 @@ async def main():
     # Запускаем все задачи
     asyncio.create_task(background_tasks())
     asyncio.create_task(silent_ping())
-    asyncio.create_task(start_dummy_server())  # 👈 Заглушка порта для Render
-    asyncio.create_task(send_startup_message())  # 👈 Одно приветственное сообщение
+    asyncio.create_task(start_dummy_server())
+    asyncio.create_task(send_startup_message())
     
-    logger.info(f"✅ БОТ ЗАПУЩЕН! @{(await bot.me()).username}")
-    logger.info("✅ Режим: ТИХИЙ (без минутных сообщений)")
-    print(f"✅ БОТ ЗАПУЩЕН! @{(await bot.me()).username}")
-    print("✅ Режим: ТИХИЙ (без минутных сообщений)")
+    me = await bot.get_me()
+    logger.info(f"✅ БОТ ЗАПУЩЕН! @{me.username}")
+    print(f"✅ БОТ ЗАПУЩЕН! @{me.username}")
 
     await dp.start_polling(bot)
 
