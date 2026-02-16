@@ -37,7 +37,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ---------------- НАСТРОЙКИ ----------------
-BOT_TOKEN = "8202743130:AAGdu2M59Byz0oZ5A-y-JX6iU30qlbR-g6A"
+BOT_TOKEN = "BOT_TOKEN"
 ADMINS = [8136808901, 6479090914, 7716319249, 7406866574]
 START_BALANCE = 100
 DAILY_BALANCE = 500
@@ -1852,4 +1852,5 @@ async def main():
 
 
 if __name__ == "__main__":
+
     asyncio.run(main())
