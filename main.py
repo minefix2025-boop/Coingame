@@ -15,8 +15,6 @@ from aiogram.types import (
     ReplyKeyboardMarkup, KeyboardButton, PreCheckoutQuery, LabeledPrice
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -41,6 +39,8 @@ if not BOT_TOKEN:
     raise ValueError("❌ ТОКЕН НЕ НАЙДЕН! Добавьте BOT_TOKEN в переменные окружения")
 
 ADMINS = [8136808901, 6479090914, 7716319249]
+YOUR_USERNAME = "@RobloxMinePump"
+
 START_BALANCE = 100
 DAILY_BALANCE = 500
 DAILY_BALANCE_ELITE = 2500
@@ -51,32 +51,25 @@ DAILY_ACCELERATORS_DELUXE = 100
 START_ACCELERATORS = 10
 DAILY_HOURS = 12
 
-# ---------------- НАСТРОЙКИ ДОНАТА ----------------
 STAR_TO_COINS = 10000
 ELITE_PRICE = 50
 DELUXE_PRICE = 99
 
-# ---------------- ФАЙЛ ДЛЯ ХРАНЕНИЯ ДАННЫХ ----------------
 DATA_FILE = "bot_data.json"
-
-# ---------------- НАСТРОЙКИ РУЛЕТКИ ----------------
 ROULETTE_MULTIPLIER = 36
 
-# ---------------- НАСТРОЙКИ РУДНИКА ----------------
 MINE_LEVELS = {
     0: {"name": "Золотая шахта", "resource": "Золото", "price_per_unit": 2, "upgrade_cost": 1000000},
     1: {"name": "Рубиновая шахта", "resource": "Рубин", "price_per_unit": 10, "upgrade_cost": 5000000},
     2: {"name": "Алмазная шахта", "resource": "Алмаз", "price_per_unit": 100, "upgrade_cost": 20000000}
 }
 
-# ---------------- НАСТРОЙКИ БИЗНЕСА ----------------
 BUSINESS_TYPES = {
     "shaurma": {"name": "Шаурма", "cost": 100, "base_profit": 10, "profit_period": 30},
     "cafe": {"name": "Кафе", "cost": 1000, "base_profit": 100, "profit_period": 15},
     "space": {"name": "Космическое агентство", "cost": 1000000, "base_profit": 10000, "profit_period": 5}
 }
 
-# ---------------- НАСТРОЙКИ МИНИ-ИГРЫ ----------------
 MINI_ROWS = 5
 MINI_COLS = 5
 MINI_CELLS = MINI_ROWS * MINI_COLS
@@ -102,7 +95,6 @@ user_mini_settings = {}
 
 INFINITE_BALANCE = "INFINITE"
 
-# Инициализация бота
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
@@ -126,10 +118,8 @@ def save_data():
             "user_premium": {str(k): v for k, v in user_premium.items()},
             "user_mini_settings": {str(k): v for k, v in user_mini_settings.items()}
         }
-
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2, default=str)
-
         logger.info("✅ Данные успешно сохранены")
         return True
     except Exception as e:
@@ -151,7 +141,6 @@ def load_data():
             data = json.load(f)
 
         user_balances = {int(k): v for k, v in data.get("user_balances", {}).items()}
-
         daily_used_data = data.get("daily_used", {})
         for k, v in daily_used_data.items():
             if v:
@@ -209,7 +198,6 @@ def ensure_user(u_id: int):
 def get_premium_status(user_id: int) -> str:
     ensure_user(user_id)
     premium = user_premium[user_id]
-
     if premium["type"] == "deluxe":
         return "Делюкс"
     elif premium["type"] == "elite":
@@ -352,11 +340,9 @@ def get_mine_info(user_id: int) -> str:
     if user_id not in mine_data:
         ensure_user(user_id)
     mine = mine_data.get(user_id, {"level": 0, "resources": 0, "auto_collect": False})
-
     level = mine["level"]
     if level > 2:
         level = 2
-
     level_info = MINE_LEVELS[level]
 
     info = f"{level_info['name']}\n"
@@ -376,14 +362,14 @@ def get_mine_info(user_id: int) -> str:
     return info
 
 
-# ---------------- КЛАВИАТУРЫ (БЕЗ ЭМОДЗИ) ----------------
+# ---------------- КЛАВИАТУРЫ ----------------
 def get_main_reply_keyboard() -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
     buttons = [
         ["Баланс", "Работа", "Игры"],
         ["Профиль", "Бизнес", "Рудник"],
         ["Банк", "Рулетка", "Донат"],
-        ["Админ", "Помощь"]
+        ["Админ", "Помощь", "Активация"]
     ]
     for row in buttons:
         builder.row(*[KeyboardButton(text=btn) for btn in row])
@@ -538,7 +524,6 @@ def neighbors_indices(idx: int) -> List[int]:
 
 def create_mini_keyboard(opened: Set[int], bombs: Set[int], game_id: str = None) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-
     for row in range(MINI_ROWS):
         row_buttons = []
         for col in range(MINI_COLS):
@@ -561,12 +546,104 @@ def create_mini_keyboard(opened: Set[int], bombs: Set[int], game_id: str = None)
     return builder.as_markup()
 
 
-# ---------------- КОМАНДЫ ----------------
+# ---------------- КОМАНДА /id ----------------
+@dp.message(Command("id"))
+async def cmd_id(message: Message):
+    if message.reply_to_message:
+        user = message.reply_to_message.from_user
+        await message.reply(
+            f"👤 <b>ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ</b>\n\n"
+            f"Имя: {user.full_name}\n"
+            f"Username: @{user.username if user.username else 'нет'}\n"
+            f"Telegram ID: <code>{user.id}</code>\n"
+            f"Язык: {user.language_code if user.language_code else 'не указан'}"
+        )
+    else:
+        user = message.from_user
+        await message.reply(
+            f"👤 <b>ТВОЙ ID</b>\n\n"
+            f"Имя: {user.full_name}\n"
+            f"Username: @{user.username if user.username else 'нет'}\n"
+            f"Telegram ID: <code>{user.id}</code>\n"
+            f"Язык: {user.language_code if user.language_code else 'не указан'}"
+        )
+
+
+# ---------------- КОМАНДА /mini ----------------
+@dp.message(Command("mini"))
+async def cmd_mini(message: Message):
+    user_id = message.from_user.id
+    ensure_user(user_id)
+
+    args = message.text.split()
+    if len(args) != 2 or not args[1].isdigit():
+        await message.answer(
+            "💣 <b>МИНИ-ИГРА: САПЁР</b>\n\n"
+            "Правила:\n"
+            "• Поле 5×5 (25 клеток)\n"
+            "• По умолчанию 5 мин\n"
+            "• Каждая открытая клетка ×1.3 к выигрышу\n"
+            "• Нашел мину - проигрыш\n\n"
+            "Используй: /mini <сумма>\n"
+            "Пример: /mini 100",
+            reply_markup=get_games_reply_keyboard()
+        )
+        return
+
+    bet = int(args[1])
+    if bet <= 0:
+        await message.answer("❌ Ставка должна быть больше 0.", reply_markup=get_games_reply_keyboard())
+        return
+
+    if not can_spend(user_id, bet):
+        await message.answer("❌ Недостаточно монет для ставки.", reply_markup=get_games_reply_keyboard())
+        return
+
+    infinite_user = has_infinite_balance(user_id)
+    if not infinite_user:
+        spend_balance(user_id, bet)
+
+    if user_id in user_mini_settings and "mines" in user_mini_settings[user_id]:
+        mines_count = user_mini_settings[user_id]["mines"]
+    else:
+        mines_count = MINI_BOMBS
+
+    game_id = f"{user_id}_{int(time.time())}"
+    bombs = generate_mini_board(mines_count)
+    opened = set()
+
+    mini_games[game_id] = {
+        "user_id": user_id,
+        "bet": bet,
+        "bombs": bombs,
+        "opened": opened,
+        "started_at": datetime.now().isoformat(),
+        "hits": 0,
+        "multiplier": 1.0,
+        "lost": False,
+        "infinite_user": infinite_user
+    }
+
+    keyboard = create_mini_keyboard(opened, bombs, game_id)
+
+    await message.answer(
+        f"<b>💣 МИНИ-ИГРА: САПЁР</b>\n\n"
+        f"💰 Ставка: {bet:,} монет\n"
+        f"💣 Мин на поле: {mines_count}\n"
+        f"📊 Открыто клеток: 0 | Множитель: 1.0x\n"
+        f"🏆 Текущий выигрыш: {bet} монет\n\n"
+        f"❌ - закрытая клетка\n"
+        f"💣 - мина (проигрыш)\n"
+        f"⬜ - пустая клетка (+1.3x)",
+        reply_markup=keyboard
+    )
+
+
+# ---------------- КОМАНДА /start ----------------
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
     user_id = message.from_user.id
     ensure_user(user_id)
-
     daily_bonus, daily_acc = get_daily_bonus(user_id)
 
     await message.answer(
@@ -576,53 +653,54 @@ async def cmd_start(message: Message):
         f"Ускорители: {user_accelerators.get(user_id, 0)}\n\n"
         f"Ежедневный бонус: /daily (+{daily_bonus:,} монет, +{daily_acc} ускорителей)\n\n"
         f"Короткие команды:\n"
-        f"• б - показать баланс\n"
-        f"• я - показать профиль\n\n"
+        f"• б - баланс\n"
+        f"• я - профиль\n"
+        f"• /id - показать ID\n\n"
         f"Используйте меню для навигации:",
         reply_markup=get_main_reply_keyboard()
     )
 
 
+# ---------------- КОМАНДА /help ----------------
 @dp.message(Command("help"))
 async def cmd_help(message: Message):
     help_text = (
-        "<b>ПОЛНАЯ ИНСТРУКЦИЯ</b>\n\n"
-        "БАЛАНС И РАБОТА:\n"
+        "<b>📚 ПОЛНАЯ ИНСТРУКЦИЯ</b>\n\n"
+        "<b>💰 БАЛАНС И РАБОТА:</b>\n"
         "• Баланс - посмотреть баланс и ускорители\n"
         "• Работа - заработать монеты (тратит ускорители)\n"
         "• /daily - ежедневный бонус\n\n"
-        "ПРОФИЛЬ:\n"
+        "<b>👤 ПРОФИЛЬ:</b>\n"
         "• Статистика - уровень, опыт, статус\n"
-        "• Имущество - рудник, бизнес, банк\n\n"
-        "ИГРЫ:\n"
+        "• Имущество - рудник, бизнес, банк\n"
+        "• /id - показать ID\n\n"
+        "<b>🎮 ИГРЫ:</b>\n"
         "• Казино - /bet <сумма> (x2)\n"
         "• Монетка - /coin\n"
         "• Мини-игра - /mini <сумма>\n"
         "• Рулетка - /roulette <сумма> (x36)\n"
         "• Простая рулетка - /rsimple <сумма> (x2)\n\n"
-        "РУДНИК:\n"
+        "<b>⛏️ РУДНИК:</b>\n"
         "• Автоматическая добыча ресурсов\n"
-        "• Улучшение для более ценных ресурсов\n\n"
-        "БИЗНЕС:\n"
-        "• Пассивный доход\n"
-        "• Разные уровни бизнеса\n\n"
-        "БАНК:\n"
+        "• Улучшение для ценных ресурсов\n\n"
+        "<b>🏢 БИЗНЕС:</b>\n"
+        "• Пассивный доход\n\n"
+        "<b>🏦 БАНК:</b>\n"
         "• /bank <сумма> - положить\n"
         "• /bank w <сумма> - снять\n\n"
-        "ДОНАТ:\n"
+        "<b>⭐ ДОНАТ:</b>\n"
+        f"• 1 ⭐ = {STAR_TO_COINS:,} коинов\n"
+        f"• Элит - {ELITE_PRICE} ⭐\n"
+        f"• Делюкс - {DELUXE_PRICE} ⭐\n"
         "• /buy_coins <звезды> - купить коины\n"
-        "• /buy_elite - купить Элит (50 ⭐)\n"
-        "• /buy_deluxe - купить Делюкс (99 ⭐)\n"
-        "• /donate_history - история покупок\n"
-        "• /refund <код> - возврат звёзд\n\n"
-        "ПРОМОКОДЫ:\n"
+        "• /buy_elite - купить Элит\n"
+        "• /buy_deluxe - купить Делюкс\n\n"
+        "<b>🎟️ ПРОМОКОДЫ:</b>\n"
         "• Введите #промокод для активации\n\n"
-        "ПЕРЕВОД:\n"
-        "• /givemoney <@user> <сумма>\n\n"
-        "КОРОТКИЕ КОМАНДЫ:\n"
+        "<b>⚡ КОРОТКИЕ КОМАНДЫ:</b>\n"
         "• б - баланс\n"
         "• я - профиль\n\n"
-        "АДМИН КОМАНДЫ:\n"
+        "<b>👑 АДМИН КОМАНДЫ:</b>\n"
         "• /money - выдать монеты\n"
         "• /setmoney - установить баланс\n"
         "• /rank - выдать ранг\n"
@@ -630,17 +708,16 @@ async def cmd_help(message: Message):
         "• /inf - бесконечный баланс\n"
         "• /removeinf - снять бесконечность\n"
         "• /createpromo - создать промокод\n"
-        "• /chance - установить сложность"
+        "• /chance - сложность мини-игры"
     )
-
     await message.answer(help_text, reply_markup=get_main_reply_keyboard())
 
 
+# ---------------- КОМАНДА /daily ----------------
 @dp.message(Command("daily"))
 async def cmd_daily(message: Message):
     user_id = message.from_user.id
     ensure_user(user_id)
-
     now = datetime.now()
 
     if user_id in daily_used and daily_used[user_id]:
@@ -670,14 +747,13 @@ async def cmd_daily(message: Message):
         f"🎁 <b>ЕЖЕДНЕВНЫЙ БОНУС!</b>\n\n"
         f"Монеты: +{daily_bonus:,}\n"
         f"Ускорители: +{daily_acc}\n"
-        f"Баланс: {format_balance(user_id)}\n"
-        f"Всего ускорителей: {user_accelerators.get(user_id, 0)}",
+        f"Баланс: {format_balance(user_id)}",
         reply_markup=get_main_reply_keyboard()
     )
-
     save_data()
 
 
+# ---------------- КОМАНДА /bet ----------------
 @dp.message(Command("bet"))
 async def cmd_bet(message: Message):
     user_id = message.from_user.id
@@ -720,10 +796,10 @@ async def cmd_bet(message: Message):
         f"{result}\nБаланс: {format_balance(user_id)}",
         reply_markup=get_games_reply_keyboard()
     )
-
     save_data()
 
 
+# ---------------- КОМАНДА /coin ----------------
 @dp.message(Command("coin"))
 async def cmd_coin(message: Message):
     user_id = message.from_user.id
@@ -735,6 +811,7 @@ async def cmd_coin(message: Message):
     )
 
 
+# ---------------- КОМАНДА /roulette ----------------
 @dp.message(Command("roulette"))
 async def cmd_roulette(message: Message):
     user_id = message.from_user.id
@@ -766,15 +843,14 @@ async def cmd_roulette(message: Message):
         spend_balance(user_id, bet)
 
     await message.answer(
-        f"<b>РУЛЕТКА</b>\n\n"
-        f"Ставка: {bet:,} монет\n"
-        f"Выберите число от 0 до 36:",
+        f"<b>РУЛЕТКА</b>\n\nСтавка: {bet:,} монет\nВыберите число от 0 до 36:",
         reply_markup=get_roulette_inline()
     )
 
 
+# ---------------- КОМАНДА /rsimple ----------------
 @dp.message(Command("rsimple"))
-async def cmd_roulette_simple(message: Message):
+async def cmd_rsimple(message: Message):
     user_id = message.from_user.id
     ensure_user(user_id)
 
@@ -799,79 +875,15 @@ async def cmd_roulette_simple(message: Message):
         return
 
     # Сохраняем ставку
-    context_data = {}
-    context_data["simple_bet"] = bet
+    roulette_games[f"simple_{user_id}"] = {"bet": bet}
 
     await message.answer(
-        f"<b>ПРОСТАЯ РУЛЕТКА</b>\n\n"
-        f"Ставка: {bet:,} монет\n"
-        f"Выберите цвет:",
+        f"<b>ПРОСТАЯ РУЛЕТКА</b>\n\nСтавка: {bet:,} монет\nВыберите цвет:",
         reply_markup=get_simple_roulette_inline()
     )
 
 
-@dp.message(Command("mini"))
-async def cmd_mini(message: Message):
-    user_id = message.from_user.id
-    ensure_user(user_id)
-
-    args = message.text.split()
-    if len(args) != 2 or not args[1].isdigit():
-        await message.answer(
-            "💣 <b>МИНИ-ИГРА: САПЁР</b>\n\n"
-            "Правила:\n• Поле 5×5\n• Каждая пустая клетка ×1.3 к выигрышу\n"
-            "• Нашел мину - проигрыш\n\n"
-            "Используй: /mini <сумма>\nПример: /mini 100",
-            reply_markup=get_games_reply_keyboard()
-        )
-        return
-
-    bet = int(args[0])
-    if bet <= 0:
-        await message.answer("❌ Ставка должна быть больше 0.", reply_markup=get_games_reply_keyboard())
-        return
-
-    if not can_spend(user_id, bet):
-        await message.answer("❌ Недостаточно монет для ставки.", reply_markup=get_games_reply_keyboard())
-        return
-
-    infinite_user = has_infinite_balance(user_id)
-    if not infinite_user:
-        spend_balance(user_id, bet)
-
-    if user_id in user_mini_settings:
-        mines_count = user_mini_settings[user_id]['mines']
-    else:
-        mines_count = MINI_BOMBS
-
-    game_id = f"{user_id}_{datetime.now().timestamp()}"
-    bombs = generate_mini_board(mines_count)
-    opened = set()
-
-    mini_games[game_id] = {
-        "user_id": user_id,
-        "bet": bet,
-        "bombs": bombs,
-        "opened": opened,
-        "started_at": datetime.now().isoformat(),
-        "hits": 0,
-        "multiplier": 1.0,
-        "lost": False,
-        "infinite_user": infinite_user
-    }
-
-    keyboard = create_mini_keyboard(opened, bombs, game_id)
-
-    await message.answer(
-        f"<b>Мини-игра: Сапёр</b>\n"
-        f"Ставка: {bet:,} монет\nМин на поле: {mines_count}\n"
-        f"Открыто клеток: 0 | Множитель: 1.0x\n"
-        f"Выигрыш: {bet} монет\n\n"
-        f"❌ - закрытая клетка\n💣 - мина\n⬜ - пустая клетка (+1.3x)",
-        reply_markup=keyboard
-    )
-
-
+# ---------------- КОМАНДА /bank ----------------
 @dp.message(Command("bank"))
 async def cmd_bank(message: Message):
     user_id = message.from_user.id
@@ -934,6 +946,7 @@ async def cmd_bank(message: Message):
         save_data()
 
 
+# ---------------- КОМАНДА /donate ----------------
 @dp.message(Command("donate"))
 async def cmd_donate(message: Message):
     user_id = message.from_user.id
@@ -943,16 +956,12 @@ async def cmd_donate(message: Message):
         f"<b>ДОНАТ МАГАЗИН</b>\n\n"
         f"1 ⭐ = {STAR_TO_COINS:,} коинов\n"
         f"Элит - {ELITE_PRICE} ⭐\n"
-        f"Делюкс - {DELUXE_PRICE} ⭐\n\n"
-        f"/buy_coins <звезды> - купить коины\n"
-        f"/buy_elite - купить Элит\n"
-        f"/buy_deluxe - купить Делюкс\n"
-        f"/donate_history - история покупок\n"
-        f"/refund <код> - возврат звёзд",
+        f"Делюкс - {DELUXE_PRICE} ⭐",
         reply_markup=get_donate_reply_keyboard()
     )
 
 
+# ---------------- КОМАНДА /buy_coins ----------------
 @dp.message(Command("buy_coins"))
 async def cmd_buy_coins(message: Message):
     user_id = message.from_user.id
@@ -988,6 +997,7 @@ async def cmd_buy_coins(message: Message):
     )
 
 
+# ---------------- КОМАНДА /buy_elite ----------------
 @dp.message(Command("buy_elite"))
 async def cmd_buy_elite(message: Message):
     user_id = message.from_user.id
@@ -1003,7 +1013,7 @@ async def cmd_buy_elite(message: Message):
 
     await message.answer_invoice(
         title="Статус Элит",
-        description="Элит статус НАВСЕГДА!\n• Ежедневный бонус: 2500 коинов\n• Ускорители: 60 в день",
+        description="Элит статус НАВСЕГДА!",
         payload=invoice_id,
         provider_token="",
         currency="XTR",
@@ -1011,6 +1021,7 @@ async def cmd_buy_elite(message: Message):
     )
 
 
+# ---------------- КОМАНДА /buy_deluxe ----------------
 @dp.message(Command("buy_deluxe"))
 async def cmd_buy_deluxe(message: Message):
     user_id = message.from_user.id
@@ -1026,107 +1037,12 @@ async def cmd_buy_deluxe(message: Message):
 
     await message.answer_invoice(
         title="Статус Делюкс",
-        description="Делюкс статус НАВСЕГДА!\n• Ежедневный бонус: 5000 коинов\n• Ускорители: 100 в день",
+        description="Делюкс статус НАВСЕГДА!",
         payload=invoice_id,
         provider_token="",
         currency="XTR",
         prices=[LabeledPrice(label="Делюкс статус", amount=DELUXE_PRICE)]
     )
-
-
-@dp.message(Command("donate_history"))
-async def cmd_donate_history(message: Message):
-    user_id = message.from_user.id
-    ensure_user(user_id)
-
-    if not user_donations[user_id]["transactions"]:
-        await message.answer("📭 У вас пока нет донат-транзакций.")
-        return
-
-    text = "ИСТОРИЯ ПОКУПОК:\n\n"
-
-    for tx in reversed(user_donations[user_id]["transactions"][-10:]):
-        status = "✅ ВОЗВРАЩЕН" if tx.get("refunded", False) else "💎 КУПЛЕНО"
-
-        if tx["type"] == "coins":
-            text += f"Коины: {tx['stars']} ⭐ → {tx['coins']:,} коинов\n"
-        elif tx["type"] == "elite":
-            text += f"Статус Элит: {tx['stars']} ⭐\n"
-        elif tx["type"] == "deluxe":
-            text += f"Статус Делюкс: {tx['stars']} ⭐\n"
-
-        text += f"ID: {tx['id']}\n"
-        text += f"Дата: {tx['timestamp'][:10]} {status}\n\n"
-
-    text += "🔹 ДЛЯ ВОЗВРАТА: /refund <код>"
-    await message.answer(text)
-
-
-@dp.message(Command("refund"))
-async def cmd_refund(message: Message):
-    user_id = message.from_user.id
-    ensure_user(user_id)
-
-    args = message.text.split()
-    if len(args) != 2:
-        await message.answer(
-            "💳 ВОЗВРАТ ЗВЁЗД\n\n"
-            "Используй: /refund <код_транзакции>\n"
-            "Код транзакции можно найти в /donate_history"
-        )
-        return
-
-    transaction_id = args[1]
-
-    found = False
-    for tx in user_donations[user_id]["transactions"]:
-        if tx["id"] == transaction_id and not tx.get("refunded", False):
-            found = True
-
-            if tx["type"] == "coins":
-                coins_returned = tx["coins"]
-
-                if can_spend(user_id, coins_returned):
-                    spend_balance(user_id, coins_returned)
-                    tx["refunded"] = True
-                    user_donations[user_id]["total_coins"] -= coins_returned
-                    user_donations[user_id]["total_stars"] -= tx["stars"]
-
-                    await message.answer(
-                        f"✅ ВОЗВРАТ ОФОРМЛЕН!\n\n"
-                        f"ID: {transaction_id}\n"
-                        f"Возвращено звёзд: {tx['stars']}\n"
-                        f"Списано коинов: {coins_returned:,}\n"
-                        f"Новый баланс: {format_balance(user_id)}"
-                    )
-                    save_data()
-                else:
-                    await message.answer(
-                        "❌ НЕДОСТАТОЧНО КОИНОВ ДЛЯ ВОЗВРАТА!\n\n"
-                        f"Нужно: {coins_returned:,} коинов\n"
-                        f"У вас: {format_balance(user_id)}"
-                    )
-
-            elif tx["type"] in ["elite", "deluxe"]:
-                if user_premium[user_id]["type"] == tx["type"]:
-                    user_premium[user_id]["type"] = None
-                    tx["refunded"] = True
-                    user_donations[user_id]["total_stars"] -= tx["stars"]
-
-                    status_name = "Элит" if tx["type"] == "elite" else "Делюкс"
-                    await message.answer(
-                        f"✅ ВОЗВРАТ ОФОРМЛЕН!\n\n"
-                        f"ID: {transaction_id}\n"
-                        f"Возвращено звёзд: {tx['stars']}\n"
-                        f"Статус '{status_name}' снят"
-                    )
-                    save_data()
-                else:
-                    await message.answer("❌ НЕВОЗМОЖНО ВЕРНУТЬ СТАТУС!")
-            break
-
-    if not found:
-        await message.answer("❌ ТРАНЗАКЦИЯ НЕ НАЙДЕНА ИЛИ УЖЕ ВОЗВРАЩЕНА!")
 
 
 @dp.pre_checkout_query()
@@ -1145,7 +1061,6 @@ async def successful_payment_handler(message: Message):
 
     payment = message.successful_payment
     invoice_id = payment.invoice_payload
-    stars = payment.total_amount
 
     if invoice_id not in pending_invoices:
         await message.answer("❌ Ошибка: счет не найден")
@@ -1158,13 +1073,12 @@ async def successful_payment_handler(message: Message):
         add_balance(user_id, coins)
         add_xp(user_id, coins // 100)
 
-        user_donations[user_id]["total_stars"] += stars
+        user_donations[user_id]["total_stars"] += invoice_data["stars"]
         user_donations[user_id]["total_coins"] += coins
         user_donations[user_id]["transactions"].append({
             "id": payment.telegram_payment_charge_id,
-            "invoice_id": invoice_id,
             "type": "coins",
-            "stars": stars,
+            "stars": invoice_data["stars"],
             "coins": coins,
             "timestamp": datetime.now().isoformat(),
             "refunded": False
@@ -1172,8 +1086,6 @@ async def successful_payment_handler(message: Message):
 
         await message.answer(
             f"✅ ОПЛАТА УСПЕШНА!\n\n"
-            f"ID: {payment.telegram_payment_charge_id}\n"
-            f"Звезд: {stars}\n"
             f"Получено коинов: {coins:,}\n"
             f"Баланс: {format_balance(user_id)}",
             reply_markup=get_main_reply_keyboard()
@@ -1186,19 +1098,17 @@ async def successful_payment_handler(message: Message):
             "purchased_at": datetime.now().isoformat()
         }
 
-        user_donations[user_id]["total_stars"] += stars
+        user_donations[user_id]["total_stars"] += invoice_data["stars"]
         user_donations[user_id]["transactions"].append({
             "id": payment.telegram_payment_charge_id,
-            "invoice_id": invoice_id,
             "type": "elite",
-            "stars": stars,
+            "stars": invoice_data["stars"],
             "timestamp": datetime.now().isoformat(),
             "refunded": False
         })
 
         await message.answer(
             f"✨ ПОЗДРАВЛЯЕМ!\n\n"
-            f"ID: {payment.telegram_payment_charge_id}\n"
             f"Вам выдан статус ЭЛИТ навсегда!",
             reply_markup=get_main_reply_keyboard()
         )
@@ -1210,19 +1120,17 @@ async def successful_payment_handler(message: Message):
             "purchased_at": datetime.now().isoformat()
         }
 
-        user_donations[user_id]["total_stars"] += stars
+        user_donations[user_id]["total_stars"] += invoice_data["stars"]
         user_donations[user_id]["transactions"].append({
             "id": payment.telegram_payment_charge_id,
-            "invoice_id": invoice_id,
             "type": "deluxe",
-            "stars": stars,
+            "stars": invoice_data["stars"],
             "timestamp": datetime.now().isoformat(),
             "refunded": False
         })
 
         await message.answer(
             f"💎 ПОЗДРАВЛЯЕМ!\n\n"
-            f"ID: {payment.telegram_payment_charge_id}\n"
             f"Вам выдан статус ДЕЛЮКС навсегда!",
             reply_markup=get_main_reply_keyboard()
         )
@@ -1231,191 +1139,19 @@ async def successful_payment_handler(message: Message):
     save_data()
 
 
-@dp.message(Command("givemoney"))
-async def cmd_givemoney(message: Message):
-    user_id = message.from_user.id
-    ensure_user(user_id)
-
-    args = message.text.split()
-    if len(args) != 3 or not args[2].isdigit():
-        await message.answer("❌ Используй: /givemoney <@user> <сумма>")
-        return
-
-    target = args[1]
-    amount = int(args[2])
-
-    if amount <= 0:
-        await message.answer("❌ Сумма должна быть больше 0!")
-        return
-
-    if not can_spend(user_id, amount):
-        await message.answer(f"❌ Недостаточно монет!\nБаланс: {format_balance(user_id)}")
-        return
-
-    try:
-        if target.startswith('@'):
-            # Здесь нужно получить ID пользователя по юзернейму
-            # В aiogram 3.x это сложнее, для простоты пропустим
-            await message.answer("❌ Перевод по username временно недоступен. Используйте ID.")
-            return
-        else:
-            target_id = int(target)
-
-        ensure_user(target_id)
-        spend_balance(user_id, amount)
-        add_balance(target_id, amount)
-
-        await message.answer(f"✅ Вы перевели {amount:,} монет пользователю {target_id}")
-        save_data()
-    except:
-        await message.answer("❌ Не удалось найти пользователя")
-
-
-# ---------------- АДМИН КОМАНДЫ ----------------
-@dp.message(Command("money"))
-async def cmd_money(message: Message):
-    user_id = message.from_user.id
-    if not (is_admin(user_id) or has_rank(user_id, "Admin")):
-        await message.answer("❌ Только админы могут использовать эту команду")
-        return
-
-    args = message.text.split()
-    if len(args) == 2 and args[1].isdigit():
-        amount = int(args[1])
-        ensure_user(user_id)
-        add_balance(user_id, amount)
-        await message.answer(f"✅ Вы получили {amount:,} монет\nБаланс: {format_balance(user_id)}")
-        save_data()
-        return
-
-    await message.answer(
-        "💰 ИСПОЛЬЗОВАНИЕ:\n"
-        "/money <сумма> - выдать себе\n"
-        "Ответ на сообщение + /money <сумма> - выдать ответившему"
-    )
-
-
-@dp.message(Command("setmoney"))
-async def cmd_setmoney(message: Message):
-    user_id = message.from_user.id
-    if not (is_admin(user_id) or has_rank(user_id, "Admin")):
-        await message.answer("❌ Только админы могут использовать эту команду")
-        return
-
-    args = message.text.split()
-    if message.reply_to_message and len(args) == 2 and args[1].isdigit():
-        target_id = message.reply_to_message.from_user.id
-        amount = int(args[1])
-        ensure_user(target_id)
-        user_balances[target_id] = amount
-        await message.answer(f"✅ Баланс пользователя установлен на {amount:,}")
-        save_data()
-        return
-
-    await message.answer("❌ Ответь на сообщение: /setmoney <сумма>")
-
-
-@dp.message(Command("inf"))
-async def cmd_inf(message: Message):
-    user_id = message.from_user.id
-    if not (is_admin(user_id) or has_rank(user_id, "Admin")):
-        await message.answer("❌ Только админы могут использовать эту команду")
-        return
-
-    if message.reply_to_message:
-        target_id = message.reply_to_message.from_user.id
-        set_infinite_balance(target_id)
-        await message.answer("∞ Пользователю выдан бесконечный баланс")
-        save_data()
-        return
-
-    await message.answer("❌ Ответь на сообщение: /inf")
-
-
-@dp.message(Command("removeinf"))
-async def cmd_removeinf(message: Message):
-    user_id = message.from_user.id
-    if not (is_admin(user_id) or has_rank(user_id, "Admin")):
-        await message.answer("❌ Только админы могут использовать эту команду")
-        return
-
-    if message.reply_to_message:
-        target_id = message.reply_to_message.from_user.id
-        remove_infinite_balance(target_id)
-        await message.answer("∞ Бесконечный баланс снят")
-        save_data()
-        return
-
-    await message.answer("❌ Ответь на сообщение: /removeinf")
-
-
-@dp.message(Command("rank"))
-async def cmd_rank(message: Message):
-    user_id = message.from_user.id
-    if not is_admin(user_id):
-        await message.answer("❌ Только главные админы могут выдавать ранги")
-        return
-
-    args = message.text.split()
-    if message.reply_to_message and len(args) >= 2:
-        rank_type = args[1].lower()
-        if rank_type not in ["admin", "moderator", "elite", "deluxe"]:
-            await message.answer("Доступные ранги: admin, moderator, elite, deluxe")
-            return
-
-        target_id = message.reply_to_message.from_user.id
-
-        if rank_type in ["elite", "deluxe"]:
-            user_premium[target_id] = {"type": rank_type, "expires": None,
-                                       "purchased_at": datetime.now().isoformat()}
-            await message.answer(f"👑 Пользователь теперь {rank_type.capitalize()}!")
-        else:
-            ranks[target_id] = rank_type.capitalize()
-            await message.answer(f"👑 Пользователь теперь {rank_type.capitalize()}!")
-
-        save_data()
-        return
-
-    await message.answer("❌ Ответь на сообщение: /rank <admin/moderator/elite/deluxe>")
-
-
-@dp.message(Command("unrank"))
-async def cmd_unrank(message: Message):
-    user_id = message.from_user.id
-    if not is_admin(user_id):
-        await message.answer("❌ Только главные админы могут снимать ранги")
-        return
-
-    if message.reply_to_message:
-        target_id = message.reply_to_message.from_user.id
-        if target_id in ranks:
-            old_rank = ranks.pop(target_id)
-            await message.answer(f"👑 Ранг '{old_rank}' снят")
-            save_data()
-        elif user_premium.get(target_id, {}).get("type"):
-            old_type = user_premium[target_id]["type"]
-            user_premium[target_id]["type"] = None
-            await message.answer(f"👑 Статус '{old_type}' снят")
-            save_data()
-        else:
-            await message.answer("ℹ️ Пользователь не имеет ранга/статуса")
-        return
-
-    await message.answer("❌ Ответь на сообщение: /unrank")
-
-
+# ---------------- КОМАНДА /createpromo ----------------
 @dp.message(Command("createpromo"))
 async def cmd_createpromo(message: Message):
     user_id = message.from_user.id
-    if not (is_admin(user_id) or has_rank(user_id, "Admin")):
+    if not is_admin(user_id):
         await message.answer("❌ Только админы могут создавать промокоды")
         return
 
     args = message.text.split()
-    if len(args) < 3:
+    if len(args) < 4:
         await message.answer(
             "🎟️ СОЗДАНИЕ ПРОМОКОДА:\n\n"
-            "/createpromo <m/u> <сумма> <кол-во активаций> <код (опционально)>"
+            "/createpromo <m/u> <сумма> <кол-во> <код>"
         )
         return
 
@@ -1457,10 +1193,145 @@ async def cmd_createpromo(message: Message):
     save_data()
 
 
+# ---------------- КОМАНДА /money ----------------
+@dp.message(Command("money"))
+async def cmd_money(message: Message):
+    user_id = message.from_user.id
+    if not is_admin(user_id):
+        await message.answer("❌ Только админы могут использовать эту команду")
+        return
+
+    args = message.text.split()
+    if len(args) == 2 and args[1].isdigit():
+        amount = int(args[1])
+        ensure_user(user_id)
+        add_balance(user_id, amount)
+        await message.answer(f"✅ Вы получили {amount:,} монет\nБаланс: {format_balance(user_id)}")
+        save_data()
+        return
+
+    await message.answer("❌ Используй: /money <сумма>")
+
+
+# ---------------- КОМАНДА /setmoney ----------------
+@dp.message(Command("setmoney"))
+async def cmd_setmoney(message: Message):
+    user_id = message.from_user.id
+    if not is_admin(user_id):
+        await message.answer("❌ Только админы могут использовать эту команду")
+        return
+
+    args = message.text.split()
+    if message.reply_to_message and len(args) == 2 and args[1].isdigit():
+        target_id = message.reply_to_message.from_user.id
+        amount = int(args[1])
+        ensure_user(target_id)
+        user_balances[target_id] = amount
+        await message.answer(f"✅ Баланс пользователя установлен на {amount:,}")
+        save_data()
+        return
+
+    await message.answer("❌ Ответь на сообщение: /setmoney <сумма>")
+
+
+# ---------------- КОМАНДА /inf ----------------
+@dp.message(Command("inf"))
+async def cmd_inf(message: Message):
+    user_id = message.from_user.id
+    if not is_admin(user_id):
+        await message.answer("❌ Только админы могут использовать эту команду")
+        return
+
+    if message.reply_to_message:
+        target_id = message.reply_to_message.from_user.id
+        set_infinite_balance(target_id)
+        await message.answer("∞ Пользователю выдан бесконечный баланс")
+        save_data()
+        return
+
+    await message.answer("❌ Ответь на сообщение: /inf")
+
+
+# ---------------- КОМАНДА /removeinf ----------------
+@dp.message(Command("removeinf"))
+async def cmd_removeinf(message: Message):
+    user_id = message.from_user.id
+    if not is_admin(user_id):
+        await message.answer("❌ Только админы могут использовать эту команду")
+        return
+
+    if message.reply_to_message:
+        target_id = message.reply_to_message.from_user.id
+        remove_infinite_balance(target_id)
+        await message.answer("∞ Бесконечный баланс снят")
+        save_data()
+        return
+
+    await message.answer("❌ Ответь на сообщение: /removeinf")
+
+
+# ---------------- КОМАНДА /rank ----------------
+@dp.message(Command("rank"))
+async def cmd_rank(message: Message):
+    user_id = message.from_user.id
+    if not is_admin(user_id):
+        await message.answer("❌ Только админы могут выдавать ранги")
+        return
+
+    args = message.text.split()
+    if message.reply_to_message and len(args) >= 2:
+        rank_type = args[1].lower()
+        if rank_type not in ["admin", "moderator", "elite", "deluxe"]:
+            await message.answer("Доступные ранги: admin, moderator, elite, deluxe")
+            return
+
+        target_id = message.reply_to_message.from_user.id
+
+        if rank_type in ["elite", "deluxe"]:
+            user_premium[target_id] = {"type": rank_type, "expires": None,
+                                       "purchased_at": datetime.now().isoformat()}
+            await message.answer(f"👑 Пользователь теперь {rank_type.capitalize()}!")
+        else:
+            ranks[target_id] = rank_type.capitalize()
+            await message.answer(f"👑 Пользователь теперь {rank_type.capitalize()}!")
+
+        save_data()
+        return
+
+    await message.answer("❌ Ответь на сообщение: /rank <admin/moderator/elite/deluxe>")
+
+
+# ---------------- КОМАНДА /unrank ----------------
+@dp.message(Command("unrank"))
+async def cmd_unrank(message: Message):
+    user_id = message.from_user.id
+    if not is_admin(user_id):
+        await message.answer("❌ Только админы могут снимать ранги")
+        return
+
+    if message.reply_to_message:
+        target_id = message.reply_to_message.from_user.id
+        if target_id in ranks:
+            old_rank = ranks.pop(target_id)
+            await message.answer(f"👑 Ранг '{old_rank}' снят")
+            save_data()
+        elif user_premium.get(target_id, {}).get("type"):
+            old_type = user_premium[target_id]["type"]
+            user_premium[target_id]["type"] = None
+            await message.answer(f"👑 Статус '{old_type}' снят")
+            save_data()
+        else:
+            await message.answer("ℹ️ Пользователь не имеет ранга/статуса")
+        return
+
+    await message.answer("❌ Ответь на сообщение: /unrank")
+
+
+# ---------------- КОМАНДА /chance ----------------
 @dp.message(Command("chance"))
 async def cmd_chance(message: Message):
     user_id = message.from_user.id
-    if not (is_admin(user_id) or has_rank(user_id, "Admin")):
+    if not is_admin(user_id):
         await message.answer("❌ Только админы могут использовать /chance")
         return
 
@@ -1515,7 +1386,6 @@ async def cmd_chance(message: Message):
 async def text_balance(message: Message):
     user_id = message.from_user.id
     ensure_user(user_id)
-
     await message.answer(
         f"<b>💰 ВАШ БАЛАНС</b>\n\n"
         f"Наличные: {format_balance(user_id)} монет\n"
@@ -1528,18 +1398,13 @@ async def text_balance(message: Message):
 @dp.message(F.text == "Работа")
 async def text_work(message: Message):
     user_id = message.from_user.id
-
     if not can_work(user_id):
         await message.answer(
             "❌ У вас закончились ускорители!\nПолучите ускорители через /daily или промокоды.",
             reply_markup=get_main_reply_keyboard()
         )
         return
-
-    await message.answer(
-        "💼 ВЫБЕРИТЕ РАБОТУ:",
-        reply_markup=get_jobs_reply_keyboard()
-    )
+    await message.answer("💼 ВЫБЕРИТЕ РАБОТУ:", reply_markup=get_jobs_reply_keyboard())
 
 
 @dp.message(F.text.in_(["Курьер", "Таксист", "Программист"]))
@@ -1575,10 +1440,7 @@ async def text_do_work(message: Message):
 
 @dp.message(F.text == "Игры")
 async def text_games(message: Message):
-    await message.answer(
-        "🎮 ВЫБЕРИТЕ ИГРУ:",
-        reply_markup=get_games_reply_keyboard()
-    )
+    await message.answer("🎮 ВЫБЕРИТЕ ИГРУ:", reply_markup=get_games_reply_keyboard())
 
 
 @dp.message(F.text == "Казино")
@@ -1604,20 +1466,13 @@ async def text_mini(message: Message):
 
 @dp.message(F.text == "Профиль")
 async def text_profile(message: Message):
-    user_id = message.from_user.id
-    ensure_user(user_id)
-
-    await message.answer(
-        "👤 ВАШ ПРОФИЛЬ\n\nВыберите действие:",
-        reply_markup=get_profile_reply_keyboard()
-    )
+    await message.answer("👤 ВАШ ПРОФИЛЬ\n\nВыберите действие:", reply_markup=get_profile_reply_keyboard())
 
 
 @dp.message(F.text == "Статистика")
 async def text_stats(message: Message):
     user_id = message.from_user.id
     ensure_user(user_id)
-
     profile = user_profiles[user_id]
     status = get_user_status(user_id)
 
@@ -1662,7 +1517,6 @@ async def text_assets(message: Message):
         )
 
     text += f"🏦 БАНК: {format_bank_balance(user_id)} монет"
-
     await message.answer(text, reply_markup=get_profile_reply_keyboard())
 
 
@@ -1764,7 +1618,6 @@ async def text_sell_business(message: Message):
 async def text_mine(message: Message):
     user_id = message.from_user.id
     ensure_user(user_id)
-
     mine_info = get_mine_info(user_id)
     await message.answer(f"<b>⛏ РУДНИК</b>\n\n{mine_info}", reply_markup=get_mine_reply_keyboard())
 
@@ -1908,13 +1761,20 @@ async def text_admin(message: Message):
     user_id = message.from_user.id
 
     if is_admin(user_id):
-        text = "👑 АДМИН ПАНЕЛЬ"
+        await message.answer(
+            "<b>👑 АДМИН ПАНЕЛЬ</b>\n\nВыберите действие:",
+            reply_markup=get_admin_inline()
+        )
     elif has_rank(user_id, "Admin") or has_rank(user_id, "moderator"):
-        text = "🛡 ПАНЕЛЬ МОДЕРАТОРА"
+        await message.answer(
+            "🛡 ПАНЕЛЬ МОДЕРАТОРА\n\nДоступ ограничен",
+            reply_markup=get_main_reply_keyboard()
+        )
     else:
-        text = "❌ У вас нет админ прав"
-
-    await message.answer(text, reply_markup=get_main_reply_keyboard())
+        await message.answer(
+            "❌ У вас нет админ прав",
+            reply_markup=get_main_reply_keyboard()
+        )
 
 
 @dp.message(F.text == "Помощь")
@@ -1922,12 +1782,20 @@ async def text_help(message: Message):
     await cmd_help(message)
 
 
+@dp.message(F.text == "Активация")
+async def text_activation(message: Message):
+    await message.answer(
+        f"✅ <b>БОТ АКТИВИРОВАН!</b>\n\n"
+        f"Система поддержания работы:\n"
+        f"• Авто-пинг каждые 10 минут\n"
+        f"• Минутные сообщения для @RobloxMinePump\n\n"
+        f"Текущее время: {datetime.now().strftime('%H:%M:%S')}"
+    )
+
+
 @dp.message(F.text == "Назад в меню")
 async def text_back(message: Message):
-    await message.answer(
-        "↩️ Главное меню:",
-        reply_markup=get_main_reply_keyboard()
-    )
+    await message.answer("↩️ Главное меню:", reply_markup=get_main_reply_keyboard())
 
 
 @dp.message(F.text.startswith("#"))
@@ -2008,10 +1876,7 @@ async def short_profile(message: Message):
 # ---------------- CALLBACK ОБРАБОТЧИКИ ----------------
 @dp.callback_query(F.data == "back_main")
 async def callback_back(callback: CallbackQuery):
-    await callback.message.edit_text(
-        "📋 Главное меню:",
-        reply_markup=None
-    )
+    await callback.message.edit_text("📋 Главное меню:", reply_markup=None)
     await callback.answer()
 
 
@@ -2078,19 +1943,13 @@ async def callback_simple_roulette(callback: CallbackQuery):
         await callback.answer()
         return
 
-    # Здесь нужно получить ставку из контекста
-    # В aiogram 3.x для этого нужно использовать FSM или хранить во временных данных
-    # Для простоты используем заглушку
-    bet = 100  # Заглушка, нужно реализовать нормальное хранение
-
-    if not can_spend(user_id, bet) and not has_infinite_balance(user_id):
-        await callback.message.edit_text("❌ Недостаточно монет!")
+    game_key = f"simple_{user_id}"
+    if game_key not in roulette_games:
+        await callback.message.edit_text("❌ Игра не найдена. Начните заново: /rsimple")
         await callback.answer()
         return
 
-    if not has_infinite_balance(user_id):
-        spend_balance(user_id, bet)
-
+    bet = roulette_games[game_key]["bet"]
     result = random.choice(["red", "black"])
     result_color = "Красный" if result == "red" else "Черный"
 
@@ -2118,6 +1977,7 @@ async def callback_simple_roulette(callback: CallbackQuery):
             f"Баланс: {format_balance(user_id)}"
         )
 
+    del roulette_games[game_key]
     await callback.answer()
     save_data()
 
@@ -2180,10 +2040,10 @@ async def callback_mini_handler(callback: CallbackQuery):
         keyboard = create_mini_keyboard(state['opened'], state['bombs'], game_id)
 
         await callback.message.edit_text(
-            f"<b>Мини-игра: Сапёр</b>\n"
-            f"Ставка: {state['bet']:,} монет\n"
-            f"Открыто клеток: {state['hits']} | Множитель: {state['multiplier']:.2f}x\n"
-            f"Выигрыш: {win_amount:,} монет\n\n"
+            f"<b>💣 Мини-игра: Сапёр</b>\n"
+            f"💰 Ставка: {state['bet']:,} монет\n"
+            f"📊 Открыто клеток: {state['hits']} | Множитель: {state['multiplier']:.2f}x\n"
+            f"🏆 Выигрыш: {win_amount:,} монет\n\n"
             f"Продолжайте открывать клетки!",
             reply_markup=keyboard
         )
@@ -2263,7 +2123,7 @@ async def background_tasks():
                     else:
                         business["last_collect"] = now
 
-            # Автосохранение раз в 5 минут
+            # Автосохранение
             if random.random() < 0.0167:
                 save_data()
 
@@ -2273,14 +2133,64 @@ async def background_tasks():
             await asyncio.sleep(1)
 
 
-# ---------------- ЗАПУСК БОТА ----------------
+# ---------------- МИНУТНЫЙ ПИНГ ДЛЯ ТЕБЯ ----------------
+async def send_minute_ping():
+    """Отправляет сообщение каждую минуту пользователю @RobloxMinePump"""
+    while True:
+        try:
+            # Получаем chat_id по юзернейму
+            chat = await bot.get_chat(YOUR_USERNAME)
+            YOUR_USER_ID = chat.id
+
+            # Отправляем сообщение
+            await bot.send_message(
+                chat_id=YOUR_USER_ID,
+                text=f"✅ Бот активен! Время: {datetime.now().strftime('%H:%M:%S')}"
+            )
+
+            logger.info(f"📨 Отправлено минутное сообщение для {YOUR_USERNAME}")
+
+            # Ждем 60 секунд
+            await asyncio.sleep(60)
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка при отправке сообщения: {e}")
+            await asyncio.sleep(60)
+
+
+# ---------------- ПИНГ ДЛЯ RENDER ----------------
+async def keep_alive():
+    """Функция для поддержания бота в активном состоянии"""
+    while True:
+        try:
+            me = await bot.get_me()
+            logger.info(f"💚 Пинг: бот @{me.username} активен")
+
+            if random.random() < 0.1:
+                save_data()
+
+            await asyncio.sleep(600)  # 10 минут
+        except Exception as e:
+            logger.error(f"❌ Ошибка в пинге: {e}")
+            await asyncio.sleep(60)
+
+
+# ---------------- ЗАПУСК ----------------
 async def main():
+    # Загружаем данные
     load_data()
+
+    # Запускаем фоновые задачи
     asyncio.create_task(background_tasks())
+    asyncio.create_task(keep_alive())
+    asyncio.create_task(send_minute_ping())  # Отправка сообщений каждую минуту
 
     logger.info(f"✅ БОТ ЗАПУЩЕН! @{(await bot.me()).username}")
+    logger.info(f"✅ Минутные сообщения будут отправляться для {YOUR_USERNAME}")
     print(f"✅ БОТ ЗАПУЩЕН! @{(await bot.me()).username}")
+    print(f"✅ Минутные сообщения будут отправляться для {YOUR_USERNAME}")
 
+    # Запускаем polling
     await dp.start_polling(bot)
 
 
@@ -2290,4 +2200,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("Бот остановлен")
     except Exception as e:
-        logger.error(f"Критическая ошибка: {e}")
+        logger.error(f"❌ Критическая ошибка: {e}")
