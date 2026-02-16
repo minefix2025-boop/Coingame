@@ -2297,31 +2297,45 @@ async def background_tasks():
             await asyncio.sleep(1)
 
 
-# ---------------- МИНУТНЫЙ ПИНГ ДЛЯ ТЕБЯ ----------------
+# ---------------- МИНУТНЫЙ ПИНГ ДЛЯ ТЕБЯ (ИСПРАВЛЕННЫЙ) ----------------
 async def send_minute_ping():
     """Отправляет сообщение каждую минуту пользователю @RobloxMinePump"""
     while True:
         try:
-            # Получаем chat_id по юзернейму
-            chat = await bot.get_chat(YOUR_USERNAME)
-            YOUR_USER_ID = chat.id
-
-            # Отправляем сообщение
-            await bot.send_message(
-                chat_id=YOUR_USER_ID,
-                text=f"✅ Бот активен! Время: {datetime.now().strftime('%H:%M:%S')}"
-            )
-
-            logger.info(f"📨 Отправлено минутное сообщение для {YOUR_USERNAME}")
+            # Проверяем, существует ли чат
+            try:
+                chat = await bot.get_chat(YOUR_USERNAME)
+                YOUR_USER_ID = chat.id
+                
+                # Отправляем сообщение
+                await bot.send_message(
+                    chat_id=YOUR_USER_ID,
+                    text=f"✅ Бот активен! Время: {datetime.now().strftime('%H:%M:%S')}"
+                )
+                logger.info(f"📨 Отправлено минутное сообщение для {YOUR_USERNAME}")
+                
+            except Exception as e:
+                logger.error(f"❌ Не могу отправить сообщение для {YOUR_USERNAME}: {e}")
+                logger.info(f"💡 Напиши боту @CoinTGGamebot от @RobloxMinePump и нажми START")
+                
+                # Пытаемся отправить админам предупреждение
+                for admin_id in ADMINS:
+                    try:
+                        await bot.send_message(
+                            chat_id=admin_id,
+                            text=f"⚠️ ВНИМАНИЕ! Бот не может писать @RobloxMinePump!\n"
+                                 f"Нужно: @RobloxMinePump должен написать боту и нажать START"
+                        )
+                        break
+                    except:
+                        pass
 
             # Ждем 60 секунд
             await asyncio.sleep(60)
 
         except Exception as e:
-            logger.error(f"❌ Ошибка при отправке сообщения: {e}")
+            logger.error(f"❌ Критическая ошибка в send_minute_ping: {e}")
             await asyncio.sleep(60)
-
-
 # ---------------- ПИНГ ДЛЯ RENDER ----------------
 async def keep_alive():
     """Функция для поддержания бота в активном состоянии"""
@@ -2365,3 +2379,4 @@ if __name__ == "__main__":
         logger.info("Бот остановлен")
     except Exception as e:
         logger.error(f"❌ Критическая ошибка: {e}")
+
