@@ -102,6 +102,7 @@ dp = Dispatcher(storage=storage)
 
 # ---------------- ФУНКЦИИ ДЛЯ РАБОТЫ С ФАЙЛАМИ ----------------
 def save_data():
+    """Сохранение всех данных в файл"""
     try:
         data = {
             "user_balances": {str(k): v for k, v in user_balances.items()},
@@ -128,12 +129,15 @@ def save_data():
 
 
 def load_data():
+    """Загрузка всех данных из файла"""
     global user_balances, daily_used, ranks, user_accelerators, mine_data
     global business_data, user_bank, promo_codes, user_profiles
     global user_donations, user_premium, user_mini_settings
 
     if not os.path.exists(DATA_FILE):
         logger.info("📁 Файл данных не найден, создаем новый")
+        # Создаем пустой файл
+        save_data()
         return False
 
     try:
@@ -141,6 +145,7 @@ def load_data():
             data = json.load(f)
 
         user_balances = {int(k): v for k, v in data.get("user_balances", {}).items()}
+        
         daily_used_data = data.get("daily_used", {})
         for k, v in daily_used_data.items():
             if v:
@@ -177,6 +182,7 @@ def load_data():
 
 # ---------------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------------
 def ensure_user(u_id: int):
+    """Гарантирует, что пользователь есть во всех словарях"""
     if u_id not in user_balances:
         user_balances[u_id] = START_BALANCE
     if u_id not in user_accelerators:
@@ -583,7 +589,8 @@ async def cmd_mini(message: Message):
             "• Поле 5×5 (25 клеток)\n"
             "• По умолчанию 5 мин\n"
             "• Каждая открытая клетка ×1.3 к выигрышу\n"
-            "• Нашел мину - проигрыш\n\n"
+            "• Нашел мину - проигрыш\n"
+            "• Можно забрать выигрыш в любой момент\n\n"
             "Используй: /mini <сумма>\n"
             "Пример: /mini 100",
             reply_markup=get_games_reply_keyboard()
@@ -659,6 +666,7 @@ async def cmd_start(message: Message):
         f"Используйте меню для навигации:",
         reply_markup=get_main_reply_keyboard()
     )
+    save_data()
 
 
 # ---------------- КОМАНДА /help ----------------
@@ -703,14 +711,14 @@ async def cmd_help(message: Message):
         "• б - баланс\n"
         "• я - профиль\n\n"
         "<b>👑 АДМИН КОМАНДЫ:</b>\n"
-        "• /money - выдать монеты\n"
-        "• /setmoney - установить баланс\n"
-        "• /rank - выдать ранг\n"
-        "• /unrank - снять ранг\n"
-        "• /inf - бесконечный баланс\n"
-        "• /removeinf - снять бесконечность\n"
+        "• /money <сумма> - выдать себе монеты\n"
+        "• /setmoney <сумма> - установить баланс (ответом)\n"
+        "• /rank <ранг> - выдать ранг (ответом)\n"
+        "• /unrank - снять ранг (ответом)\n"
+        "• /inf - бесконечный баланс (ответом)\n"
+        "• /removeinf - снять бесконечность (ответом)\n"
         "• /createpromo - создать промокод\n"
-        "• /chance - сложность мини-игры"
+        "• /chance <0-100> - сложность мини-игры (ответом)"
     )
     await message.answer(help_text, reply_markup=get_main_reply_keyboard())
 
@@ -1080,7 +1088,7 @@ async def cmd_donate_history(message: Message):
     await message.answer(text, reply_markup=get_main_reply_keyboard())
 
 
-# ---------------- КОМАНДА /refund (ИСПРАВЛЕННАЯ) ----------------
+# ---------------- КОМАНДА /refund ----------------
 @dp.message(Command("refund"))
 async def cmd_refund(message: Message):
     user_id = message.from_user.id
@@ -1119,7 +1127,6 @@ async def cmd_refund(message: Message):
                     user_donations[user_id]["total_stars"] -= tx["stars"]
 
                     try:
-                        # Возвращаем звёзды через Telegram
                         await bot.refund_star_payment(
                             user_id=user_id,
                             telegram_payment_charge_id=transaction_id
@@ -1952,7 +1959,7 @@ async def text_activation(message: Message):
         f"✅ <b>БОТ АКТИВИРОВАН!</b>\n\n"
         f"Система поддержания работы:\n"
         f"• Авто-пинг каждые 10 минут\n"
-        f"• Минутные сообщения для @RobloxMinePump\n\n"
+        f"• Данные сохраняются автоматически\n\n"
         f"Текущее время: {datetime.now().strftime('%H:%M:%S')}"
     )
 
@@ -2040,7 +2047,8 @@ async def short_profile(message: Message):
 # ---------------- CALLBACK ОБРАБОТЧИКИ ----------------
 @dp.callback_query(F.data == "back_main")
 async def callback_back(callback: CallbackQuery):
-    await callback.message.edit_text("📋 Главное меню:", reply_markup=None)
+    await callback.message.delete()
+    await callback.message.answer("📋 Главное меню:", reply_markup=get_main_reply_keyboard())
     await callback.answer()
 
 
@@ -2259,6 +2267,7 @@ async def callback_mini_handler(callback: CallbackQuery):
 
 # ---------------- ФОНОВЫЕ ЗАДАЧИ ----------------
 async def background_tasks():
+    """Фоновые задачи для обновления рудника и бизнеса"""
     while True:
         try:
             now = datetime.now()
@@ -2287,7 +2296,7 @@ async def background_tasks():
                     else:
                         business["last_collect"] = now
 
-            # Автосохранение
+            # Автосохранение раз в 5 минут
             if random.random() < 0.0167:
                 save_data()
 
@@ -2297,76 +2306,62 @@ async def background_tasks():
             await asyncio.sleep(1)
 
 
-# ---------------- МИНУТНЫЙ ПИНГ ДЛЯ ТЕБЯ (ИСПРАВЛЕННЫЙ) ----------------
-async def send_minute_ping():
-    """Отправляет сообщение каждую минуту пользователю @RobloxMinePump"""
+# ---------------- ТИХИЙ ПИНГ ДЛЯ RENDER ----------------
+async def silent_ping():
+    """Тихий пинг без отправки сообщений - только для Render"""
     while True:
         try:
-            # Проверяем, существует ли чат
-            try:
-                chat = await bot.get_chat(YOUR_USERNAME)
-                YOUR_USER_ID = chat.id
-                
-                # Отправляем сообщение
-                await bot.send_message(
-                    chat_id=YOUR_USER_ID,
-                    text=f"✅ Бот активен! Время: {datetime.now().strftime('%H:%M:%S')}"
-                )
-                logger.info(f"📨 Отправлено минутное сообщение для {YOUR_USERNAME}")
-                
-            except Exception as e:
-                logger.error(f"❌ Не могу отправить сообщение для {YOUR_USERNAME}: {e}")
-                logger.info(f"💡 Напиши боту @CoinTGGamebot от @RobloxMinePump и нажми START")
-                
-                # Пытаемся отправить админам предупреждение
-                for admin_id in ADMINS:
-                    try:
-                        await bot.send_message(
-                            chat_id=admin_id,
-                            text=f"⚠️ ВНИМАНИЕ! Бот не может писать @RobloxMinePump!\n"
-                                 f"Нужно: @RobloxMinePump должен написать боту и нажать START"
-                        )
-                        break
-                    except:
-                        pass
-
-            # Ждем 60 секунд
-            await asyncio.sleep(60)
-
-        except Exception as e:
-            logger.error(f"❌ Критическая ошибка в send_minute_ping: {e}")
-            await asyncio.sleep(60)
-# ---------------- ПИНГ ДЛЯ RENDER ----------------
-async def keep_alive():
-    """Функция для поддержания бота в активном состоянии"""
-    while True:
-        try:
+            # Просто получаем информацию о боте (легкий запрос)
             me = await bot.get_me()
-            logger.info(f"💚 Пинг: бот @{me.username} активен")
-
+            logger.info(f"💚 Тихий пинг: бот @{me.username} активен")
+            
+            # Сохраняем данные раз в 10 минут
             if random.random() < 0.1:
                 save_data()
-
+                
             await asyncio.sleep(600)  # 10 минут
         except Exception as e:
-            logger.error(f"❌ Ошибка в пинге: {e}")
+            logger.error(f"❌ Ошибка в тихом пинге: {e}")
             await asyncio.sleep(60)
+
+
+# ---------------- ПРИВЕТСТВЕННОЕ СООБЩЕНИЕ ПРИ ЗАПУСКЕ ----------------
+async def send_startup_message():
+    """Отправляет ОДНО сообщение при запуске"""
+    try:
+        # Пробуем отправить сообщение
+        chat = await bot.get_chat(YOUR_USERNAME)
+        await bot.send_message(
+            chat_id=chat.id,
+            text=f"🚀 <b>БОТ ЗАПУЩЕН!</b>\n\n"
+                 f"Время: {datetime.now().strftime('%H:%M:%S')}\n"
+                 f"Статус: ✅ Активен\n\n"
+                 f"<i>Режим: тихий (без минутных сообщений)</i>"
+        )
+        logger.info(f"📨 Отправлено приветственное сообщение для {YOUR_USERNAME}")
+    except Exception as e:
+        logger.error(f"❌ Не могу отправить сообщение для {YOUR_USERNAME}: {e}")
+        logger.info(f"💡 Напиши боту @CoinTGGamebot от @RobloxMinePump и нажми START")
 
 
 # ---------------- ЗАПУСК ----------------
 async def main():
     # Загружаем данные
     load_data()
-
+    
+    # Запускаем ТИХИЙ пинг (без спама)
+    asyncio.create_task(silent_ping())
+    
+    # Отправляем ОДНО сообщение при запуске
+    asyncio.create_task(send_startup_message())
+    
     # Запускаем фоновые задачи
     asyncio.create_task(background_tasks())
-    asyncio.create_task(keep_alive())
-    asyncio.create_task(send_minute_ping())  # Отправка сообщений каждую минуту
-
+    
     logger.info(f"✅ БОТ ЗАПУЩЕН! @{(await bot.me()).username}")
-    logger.info(f"✅ Минутные сообщения будут отправляться для {YOUR_USERNAME}")
+    logger.info("✅ Режим: ТИХИЙ (без минутных сообщений)")
     print(f"✅ БОТ ЗАПУЩЕН! @{(await bot.me()).username}")
-    print(f"✅ Минутные сообщения будут отправляться для {YOUR_USERNAME}")
+    print("✅ Режим: ТИХИЙ (без минутных сообщений)")
 
     # Запускаем polling
     await dp.start_polling(bot)
@@ -2379,4 +2374,3 @@ if __name__ == "__main__":
         logger.info("Бот остановлен")
     except Exception as e:
         logger.error(f"❌ Критическая ошибка: {e}")
-
