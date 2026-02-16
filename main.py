@@ -21,6 +21,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiohttp import web  # Добавлено для Render
 
 # Отключаем лишние логи
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -37,7 +38,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ---------------- НАСТРОЙКИ ----------------
-BOT_TOKEN = "BOT_TOKEN"
+# ✅ ИСПРАВЛЕНО: берем токен из переменных окружения Render
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+
+# Проверяем, что токен есть
+if not BOT_TOKEN:
+    error_msg = "❌ ОШИБКА: BOT_TOKEN не найден! Добавьте его в Environment Variables на Render"
+    logger.error(error_msg)
+    raise ValueError(error_msg)
+
+# Порт для Render
+PORT = int(os.getenv('PORT', 10000))
+
 ADMINS = [8136808901, 6479090914, 7716319249, 7406866574]
 START_BALANCE = 100
 DAILY_BALANCE = 500
@@ -529,8 +541,7 @@ def get_primary_inline_menu() -> InlineKeyboardMarkup:
     for text, callback in buttons:
         builder.add(InlineKeyboardButton(
             text=text,
-            callback_data=callback,
-            style="primary"
+            callback_data=callback
         ))
 
     builder.adjust(3, 3, 3, 2)
@@ -550,15 +561,13 @@ def get_work_inline() -> InlineKeyboardMarkup:
     for text, callback in jobs:
         builder.add(InlineKeyboardButton(
             text=text,
-            callback_data=callback,
-            style="primary"
+            callback_data=callback
         ))
 
     builder.adjust(3)
     builder.row(InlineKeyboardButton(
         text="Назад",
-        callback_data="back_main",
-        style="primary"
+        callback_data="back_main"
     ))
 
     return builder.as_markup()
@@ -577,15 +586,13 @@ def get_games_inline() -> InlineKeyboardMarkup:
     for text, callback in games:
         builder.add(InlineKeyboardButton(
             text=text,
-            callback_data=callback,
-            style="primary"
+            callback_data=callback
         ))
 
     builder.adjust(3)
     builder.row(InlineKeyboardButton(
         text="Назад",
-        callback_data="back_main",
-        style="primary"
+        callback_data="back_main"
     ))
 
     return builder.as_markup()
@@ -599,15 +606,13 @@ def get_roulette_inline() -> InlineKeyboardMarkup:
     for i in range(0, 37):
         builder.add(InlineKeyboardButton(
             text=str(i),
-            callback_data=f"roulette_num_{i}",
-            style="primary"
+            callback_data=f"roulette_num_{i}"
         ))
 
     builder.adjust(6)
     builder.row(InlineKeyboardButton(
         text="Отмена",
-        callback_data="roulette_cancel",
-        style="primary"
+        callback_data="roulette_cancel"
     ))
 
     return builder.as_markup()
@@ -626,15 +631,13 @@ def get_mine_inline() -> InlineKeyboardMarkup:
     for text, callback in actions:
         builder.add(InlineKeyboardButton(
             text=text,
-            callback_data=callback,
-            style="primary"
+            callback_data=callback
         ))
 
     builder.adjust(2, 1)
     builder.row(InlineKeyboardButton(
         text="Назад",
-        callback_data="back_main",
-        style="primary"
+        callback_data="back_main"
     ))
 
     return builder.as_markup()
@@ -647,19 +650,17 @@ def get_business_inline() -> InlineKeyboardMarkup:
     for biz_id, biz_info in BUSINESS_TYPES.items():
         builder.add(InlineKeyboardButton(
             text=f"{biz_info['name']} ({biz_info['cost']} монет)",
-            callback_data=f"buy_{biz_id}",
-            style="primary"
+            callback_data=f"buy_{biz_id}"
         ))
 
     builder.adjust(1)
     builder.row(
-        InlineKeyboardButton(text="Собрать прибыль", callback_data="business_collect", style="primary"),
-        InlineKeyboardButton(text="Продать бизнес", callback_data="business_sell", style="primary")
+        InlineKeyboardButton(text="Собрать прибыль", callback_data="business_collect"),
+        InlineKeyboardButton(text="Продать бизнес", callback_data="business_sell")
     )
     builder.row(InlineKeyboardButton(
         text="Назад",
-        callback_data="back_main",
-        style="primary"
+        callback_data="back_main"
     ))
 
     return builder.as_markup()
@@ -670,16 +671,15 @@ def get_bank_inline() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.add(
-        InlineKeyboardButton(text="Внести", callback_data="bank_deposit", style="primary"),
-        InlineKeyboardButton(text="Снять", callback_data="bank_withdraw", style="primary"),
-        InlineKeyboardButton(text="Баланс", callback_data="bank_balance", style="primary")
+        InlineKeyboardButton(text="Внести", callback_data="bank_deposit"),
+        InlineKeyboardButton(text="Снять", callback_data="bank_withdraw"),
+        InlineKeyboardButton(text="Баланс", callback_data="bank_balance")
     )
 
     builder.adjust(3)
     builder.row(InlineKeyboardButton(
         text="Назад",
-        callback_data="back_main",
-        style="primary"
+        callback_data="back_main"
     ))
 
     return builder.as_markup()
@@ -690,16 +690,15 @@ def get_donate_inline() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.add(
-        InlineKeyboardButton(text=f"Купить Элит ({ELITE_PRICE} ⭐)", callback_data="buy_elite", style="primary"),
-        InlineKeyboardButton(text=f"Купить Делюкс ({DELUXE_PRICE} ⭐)", callback_data="buy_deluxe", style="primary"),
-        InlineKeyboardButton(text="Купить коины", callback_data="buy_coins", style="primary")
+        InlineKeyboardButton(text=f"Купить Элит ({ELITE_PRICE} ⭐)", callback_data="buy_elite"),
+        InlineKeyboardButton(text=f"Купить Делюкс ({DELUXE_PRICE} ⭐)", callback_data="buy_deluxe"),
+        InlineKeyboardButton(text="Купить коины", callback_data="buy_coins")
     )
 
     builder.adjust(1)
     builder.row(InlineKeyboardButton(
         text="Назад",
-        callback_data="back_main",
-        style="primary"
+        callback_data="back_main"
     ))
 
     return builder.as_markup()
@@ -710,15 +709,14 @@ def get_profile_inline() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.add(
-        InlineKeyboardButton(text="Статистика", callback_data="profile_stats", style="primary"),
-        InlineKeyboardButton(text="Имущество", callback_data="profile_assets", style="primary")
+        InlineKeyboardButton(text="Статистика", callback_data="profile_stats"),
+        InlineKeyboardButton(text="Имущество", callback_data="profile_assets")
     )
 
     builder.adjust(2)
     builder.row(InlineKeyboardButton(
         text="Назад",
-        callback_data="back_main",
-        style="primary"
+        callback_data="back_main"
     ))
 
     return builder.as_markup()
@@ -740,15 +738,13 @@ def get_admin_inline() -> InlineKeyboardMarkup:
     for text, callback in admin_buttons:
         builder.add(InlineKeyboardButton(
             text=text,
-            callback_data=callback,
-            style="primary"
+            callback_data=callback
         ))
 
     builder.adjust(2)
     builder.row(InlineKeyboardButton(
         text="Назад",
-        callback_data="back_main",
-        style="primary"
+        callback_data="back_main"
     ))
 
     return builder.as_markup()
@@ -1468,13 +1464,20 @@ async def text_admin(message: Message):
     user_id = message.from_user.id
 
     if is_admin(user_id):
-        text = "👑 АДМИН ПАНЕЛЬ"
+        await message.answer(
+            "<b>👑 АДМИН ПАНЕЛЬ</b>\n\nВыберите действие:",
+            reply_markup=get_admin_inline()
+        )
     elif has_rank(user_id, "Admin") or has_rank(user_id, "moderator"):
-        text = "🛡️ ПАНЕЛЬ МОДЕРАТОРА"
+        await message.answer(
+            "🛡️ ПАНЕЛЬ МОДЕРАТОРА\n\nДоступ ограничен",
+            reply_markup=get_main_reply_keyboard()
+        )
     else:
-        text = "❌ У вас нет админ прав"
-
-    await message.answer(text, reply_markup=get_main_reply_keyboard())
+        await message.answer(
+            "❌ У вас нет админ прав",
+            reply_markup=get_main_reply_keyboard()
+        )
 
 
 @dp.message(F.text == "Помощь")
@@ -1839,20 +1842,28 @@ async def background_tasks():
             await asyncio.sleep(1)
 
 
-# ---------------- ЗАПУСК БОТА ----------------
+# ---------------- ЗАПУСК БОТА ДЛЯ RENDER ----------------
 async def main():
+    # Загружаем данные
     load_data()
-
+    
+    # Запускаем фоновые задачи
     asyncio.create_task(background_tasks())
-
-    logger.info("✅ БОТ ЗАПУЩЕН! ВСЕ INLINE КНОПКИ СИНИЕ (style=primary)")
-    print("✅ БОТ ЗАПУЩЕН! ВСЕ INLINE КНОПКИ СИНИЕ (style=primary)")
-
+    
+    # ✅ Для Render используем polling (так проще)
+    logger.info(f"✅ БОТ ЗАПУЩЕН! Токен: {BOT_TOKEN[:10]}...")
+    logger.info(f"✅ Админы: {ADMINS}")
+    print(f"✅ БОТ ЗАПУЩЕН! Токен: {BOT_TOKEN[:10]}...")
+    
+    # Запускаем polling
     await dp.start_polling(bot)
 
 
+# ---------------- ТОЧКА ВХОДА ДЛЯ RENDER ----------------
 if __name__ == "__main__":
-
-    asyncio.run(main())
-
-
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Бот остановлен")
+    except Exception as e:
+        logger.error(f"Критическая ошибка: {e}")
