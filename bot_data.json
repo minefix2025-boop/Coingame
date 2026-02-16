@@ -1,0 +1,413 @@
+{
+  "user_balances": {
+    "8136808901": 777777777777777777,
+    "7742036100": 1127000,
+    "7716319249": 0,
+    "1087968824": 100,
+    "8465073153": 66100,
+    "7406866574": "INFINITE",
+    "7290349052": 501000,
+    "5989008652": 523,
+    "136817688": 100
+  },
+  "daily_used": {
+    "8136808901": "2026-02-14T19:18:40.847180",
+    "7716319249": "2026-02-14T19:18:38.272251",
+    "7406866574": "2026-02-13T23:35:06.064406"
+  },
+  "ranks": {
+    "7406866574": "Admin"
+  },
+  "user_accelerators": {
+    "8136808901": 777777777777777777,
+    "7742036100": 10820,
+    "7716319249": 99999999999999,
+    "1087968824": 10,
+    "8465073153": 70,
+    "7406866574": 610,
+    "7290349052": 935,
+    "5989008652": 0,
+    "136817688": 10
+  },
+  "mine_data": {
+    "8136808901": {
+      "level": 2,
+      "resources": 999999999999999,
+      "auto_collect": false
+    },
+    "7742036100": {
+      "level": 0,
+      "resources": 0,
+      "auto_collect": false
+    },
+    "7716319249": {
+      "level": 0,
+      "resources": 0,
+      "auto_collect": false
+    },
+    "1087968824": {
+      "level": 0,
+      "resources": 0,
+      "auto_collect": false
+    },
+    "8465073153": {
+      "level": 0,
+      "resources": 0,
+      "auto_collect": false
+    },
+    "7406866574": {
+      "level": 2,
+      "resources": 0,
+      "auto_collect": false
+    },
+    "7290349052": {
+      "level": 0,
+      "resources": 0,
+      "auto_collect": false
+    },
+    "5989008652": {
+      "level": 0,
+      "resources": 0,
+      "auto_collect": false
+    },
+    "136817688": {
+      "level": 0,
+      "resources": 0,
+      "auto_collect": false
+    }
+  },
+  "business_data": {
+    "8136808901": {
+      "type": null,
+      "profit": 0,
+      "active": false,
+      "last_collect": null
+    },
+    "7742036100": {
+      "type": null,
+      "profit": 0,
+      "active": false,
+      "last_collect": null
+    },
+    "7716319249": {
+      "type": null,
+      "profit": 0,
+      "active": false,
+      "last_collect": null
+    },
+    "1087968824": {
+      "type": null,
+      "profit": 0,
+      "active": false,
+      "last_collect": null
+    },
+    "8465073153": {
+      "type": null,
+      "profit": 0,
+      "active": false,
+      "last_collect": null
+    },
+    "7406866574": {
+      "type": null,
+      "profit": 0,
+      "active": false,
+      "last_collect": null
+    },
+    "7290349052": {
+      "type": null,
+      "profit": 0,
+      "active": false,
+      "last_collect": null
+    },
+    "5989008652": {
+      "type": null,
+      "profit": 0,
+      "active": false,
+      "last_collect": null
+    },
+    "136817688": {
+      "type": null,
+      "profit": 0,
+      "active": false,
+      "last_collect": null
+    }
+  },
+  "user_bank": {
+    "8136808901": 777777777777777777,
+    "7742036100": 0,
+    "7716319249": 999999999999999,
+    "1087968824": 0,
+    "8465073153": 0,
+    "7406866574": 0,
+    "7290349052": 0,
+    "5989008652": 0,
+    "136817688": 0
+  },
+  "promo_codes": {
+    "HAPPY": {
+      "type": "m",
+      "amount": 1000,
+      "activations": 999999,
+      "max_activations": 999999,
+      "used_by": [
+        8136808901,
+        7406866574
+      ],
+      "created_by": 8136808901,
+      "created_at": "2026-02-14T00:16:27.975250"
+    },
+    "BOMJ": {
+      "type": "m",
+      "amount": 1,
+      "activations": 99999,
+      "max_activations": 99999,
+      "used_by": [
+        7716319249,
+        8136808901
+      ],
+      "created_by": 8136808901,
+      "created_at": "2026-02-14T19:24:47.344786"
+    },
+    "VALENTINE'S_DAY": {
+      "type": "m",
+      "amount": 100000,
+      "activations": 100,
+      "max_activations": 100,
+      "used_by": [],
+      "created_by": 8136808901,
+      "created_at": "2026-02-15T11:45:43.072518"
+    }
+  },
+  "user_profiles": {
+    "8136808901": {
+      "level": 821,
+      "xp": 5600022326630221299,
+      "next_level_xp": 28823037615171174400
+    },
+    "7742036100": {
+      "level": 47,
+      "xp": 740903360022747,
+      "next_level_xp": 7036874417766400
+    },
+    "7716319249": {
+      "level": 782,
+      "xp": 2223185421392,
+      "next_level_xp": 3199999999968
+    },
+    "1087968824": {
+      "level": 1,
+      "xp": 0,
+      "next_level_xp": 100
+    },
+    "8465073153": {
+      "level": 4,
+      "xp": 630,
+      "next_level_xp": 800
+    },
+    "7406866574": {
+      "level": 14,
+      "xp": 60068,
+      "next_level_xp": 819200
+    },
+    "7290349052": {
+      "level": 18,
+      "xp": 7904600,
+      "next_level_xp": 13107200
+    },
+    "5989008652": {
+      "level": 1,
+      "xp": 38,
+      "next_level_xp": 100
+    },
+    "136817688": {
+      "level": 1,
+      "xp": 0,
+      "next_level_xp": 100
+    }
+  },
+  "user_donations": {
+    "8136808901": {
+      "total_stars": 9999999999,
+      "total_coins": 9997000099,
+      "transactions": [
+        {
+          "id": "coins_8136808901_1770973982",
+          "type": "coins",
+          "stars": 1,
+          "coins": 10000,
+          "timestamp": "2026-02-13T16:13:10.497516",
+          "refunded": false
+        },
+        {
+          "id": "stx_GTBd2SA0PfiBOiwYwvXmrSzDsr2rNq-EiRpYGyq8HThc4nrcbgly1FrkODrzJqxmqhVs8ctT0Mb8vhATCE3Gz92C0OT-s9CWMOoaVVzE2g",
+          "invoice_id": "coins_8136808901_1770977041",
+          "type": "coins",
+          "stars": 1,
+          "coins": 10000,
+          "timestamp": "2026-02-13T17:04:29.838822",
+          "refunded": false
+        },
+        {
+          "id": "stx8xObCBM4lIhu93r0c-ukIWJdBTUNY_JZNUHmmQ_uF6BgGwXQKjXD8EbC_Ad8i_0PSfAJBoZsC0r_OJQnIr9sMBW_auP9QFU0Mre1xyMydf0",
+          "invoice_id": "coins_8136808901_1770978781",
+          "type": "coins",
+          "stars": 1,
+          "coins": 10000,
+          "timestamp": "2026-02-13T17:33:42.849063",
+          "refunded": true,
+          "refunded_at": "2026-02-13T17:34:10.826730"
+        },
+        {
+          "id": "stx6r288J_VnBBFyLkri8gBhLuu8fFIL2TTW09-ltD7cxA3x4RbjOU_UrIBTqLkg78vxiw34Yvp8HRVpRexs5bgS88PhJE0J_YAlkC0knBDZA8",
+          "invoice_id": "coins_8136808901_1771039530",
+          "type": "coins",
+          "stars": 1,
+          "coins": 10000,
+          "timestamp": "2026-02-14T10:25:41.987187",
+          "refunded": true,
+          "refunded_at": "2026-02-14T10:26:02.258634"
+        },
+        {
+          "id": "stxF6pd5HRVIX0mdGNfDWceeCyg5CS8ailainsxCy491TWFBmQf-TCv_Br50OPwz5FjNGWTkYo4rl04i8KdwtQHUB7vp8vPZtPiIP6g1ka4G_I",
+          "invoice_id": "coins_8136808901_1771042355",
+          "type": "coins",
+          "stars": 1,
+          "coins": 10000,
+          "timestamp": "2026-02-14T11:13:06.186873",
+          "refunded": true,
+          "refunded_at": "2026-02-14T11:13:26.258760"
+        },
+        {
+          "id": "stxNXB7Gs30JzExKeQLamx9Fx-ikQ0xtG18OmCyj3U7h78coqgd_UqapN_co90pOwiiRYx1t5edORYtM_MBSIL78T6VEB7Gl9sTwpAeijhxTbM",
+          "invoice_id": "coins_8136808901_1771042732",
+          "type": "coins",
+          "stars": 1,
+          "coins": 10000,
+          "timestamp": "2026-02-14T11:18:59.264780",
+          "refunded": true,
+          "refunded_at": "2026-02-14T11:19:20.867820"
+        }
+      ]
+    },
+    "7742036100": {
+      "total_stars": 149,
+      "total_coins": 0,
+      "transactions": [
+        {
+          "id": "EL17709729121428",
+          "type": "elite",
+          "stars": 50,
+          "timestamp": "2026-02-13T15:55:12.280223",
+          "refunded": false
+        },
+        {
+          "id": "DL17709729213220",
+          "type": "deluxe",
+          "stars": 99,
+          "timestamp": "2026-02-13T15:55:21.303180",
+          "refunded": false
+        }
+      ]
+    },
+    "7716319249": {
+      "total_stars": 0,
+      "total_coins": 0,
+      "transactions": []
+    },
+    "1087968824": {
+      "total_stars": 0,
+      "total_coins": 0,
+      "transactions": []
+    },
+    "8465073153": {
+      "total_stars": 0,
+      "total_coins": 0,
+      "transactions": []
+    },
+    "7406866574": {
+      "total_stars": 0,
+      "total_coins": 0,
+      "transactions": []
+    },
+    "7290349052": {
+      "total_stars": 0,
+      "total_coins": 0,
+      "transactions": []
+    },
+    "5989008652": {
+      "total_stars": 0,
+      "total_coins": 0,
+      "transactions": []
+    },
+    "136817688": {
+      "total_stars": 0,
+      "total_coins": 0,
+      "transactions": []
+    }
+  },
+  "user_premium": {
+    "8136808901": {
+      "type": "deluxe",
+      "expires": null,
+      "purchased_at": "2026-02-13T15:53:32.196551"
+    },
+    "7742036100": {
+      "type": "deluxe",
+      "expires": null,
+      "purchased_at": "2026-02-13T15:55:21.303180"
+    },
+    "7716319249": {
+      "type": "elite",
+      "expires": null,
+      "purchased_at": "2026-02-14T19:42:31.084859"
+    },
+    "1087968824": {
+      "type": null,
+      "expires": null,
+      "purchased_at": null
+    },
+    "8465073153": {
+      "type": null,
+      "expires": null,
+      "purchased_at": null
+    },
+    "7406866574": {
+      "type": "deluxe",
+      "expires": null,
+      "purchased_at": "2026-02-14T10:28:10.881519"
+    },
+    "7290349052": {
+      "type": null,
+      "expires": null,
+      "purchased_at": null
+    },
+    "5989008652": {
+      "type": null,
+      "expires": null,
+      "purchased_at": null
+    },
+    "136817688": {
+      "type": null,
+      "expires": null,
+      "purchased_at": null
+    }
+  },
+  "user_mini_settings": {
+    "8136808901": {
+      "chance": 0,
+      "mines": 8
+    },
+    "7406866574": {
+      "chance": 0,
+      "mines": 8
+    },
+    "7716319249": {
+      "chance": 100,
+      "mines": 0
+    },
+    "8202743130": {
+      "chance": 30,
+      "mines": 6
+    }
+  }
+}
