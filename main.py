@@ -694,7 +694,9 @@ async def cmd_help(message: Message):
         f"• Делюкс - {DELUXE_PRICE} ⭐\n"
         "• /buy_coins <звезды> - купить коины\n"
         "• /buy_elite - купить Элит\n"
-        "• /buy_deluxe - купить Делюкс\n\n"
+        "• /buy_deluxe - купить Делюкс\n"
+        "• /donate_history - история покупок\n"
+        "• /refund <код> - возврат звёзд\n\n"
         "<b>🎟️ ПРОМОКОДЫ:</b>\n"
         "• Введите #промокод для активации\n\n"
         "<b>⚡ КОРОТКИЕ КОМАНДЫ:</b>\n"
@@ -874,7 +876,6 @@ async def cmd_rsimple(message: Message):
         )
         return
 
-    # Сохраняем ставку
     roulette_games[f"simple_{user_id}"] = {"bet": bet}
 
     await message.answer(
@@ -1045,6 +1046,151 @@ async def cmd_buy_deluxe(message: Message):
     )
 
 
+# ---------------- КОМАНДА /donate_history ----------------
+@dp.message(Command("donate_history"))
+async def cmd_donate_history(message: Message):
+    user_id = message.from_user.id
+    ensure_user(user_id)
+
+    if not user_donations[user_id]["transactions"]:
+        await message.answer("📭 У вас пока нет донат-транзакций.")
+        return
+
+    text = "<b>📊 ИСТОРИЯ ПОКУПОК:</b>\n\n"
+
+    for tx in reversed(user_donations[user_id]["transactions"][-10:]):
+        status = "✅ ВОЗВРАЩЕН" if tx.get("refunded", False) else "💎 КУПЛЕНО"
+
+        if tx["type"] == "coins":
+            text += f"💰 <b>Коины</b>\n"
+            text += f"   ⭐ {tx['stars']} → {tx['coins']:,} коинов\n"
+        elif tx["type"] == "elite":
+            text += f"✨ <b>Статус Элит</b>\n"
+            text += f"   ⭐ {tx['stars']}\n"
+        elif tx["type"] == "deluxe":
+            text += f"💎 <b>Статус Делюкс</b>\n"
+            text += f"   ⭐ {tx['stars']}\n"
+
+        text += f"   ID: <code>{tx['id']}</code>\n"
+        text += f"   Дата: {tx['timestamp'][:10]} {status}\n\n"
+
+    text += "🔹 ДЛЯ ВОЗВРАТА ЗВЁЗД ИСПОЛЬЗУЙ:\n"
+    text += "<code>/refund код_транзакции</code>"
+
+    await message.answer(text, reply_markup=get_main_reply_keyboard())
+
+
+# ---------------- КОМАНДА /refund (ИСПРАВЛЕННАЯ) ----------------
+@dp.message(Command("refund"))
+async def cmd_refund(message: Message):
+    user_id = message.from_user.id
+    ensure_user(user_id)
+
+    args = message.text.split()
+    if len(args) != 2:
+        await message.answer(
+            "💳 <b>ВОЗВРАТ ЗВЁЗД</b>\n\n"
+            "Используй: /refund <код_транзакции>\n"
+            "Код транзакции можно найти в /donate_history\n\n"
+            "Пример: /refund 12345678901234567890\n\n"
+            "⚠️ ВНИМАНИЕ:\n"
+            "• Звёзды вернутся на ваш счёт в Telegram\n"
+            "• Коины/статус будут списаны\n"
+            "• Возврат возможен в течение 7 дней",
+            reply_markup=get_main_reply_keyboard()
+        )
+        return
+
+    transaction_id = args[1]
+    found = False
+
+    for tx in user_donations[user_id]["transactions"]:
+        if tx["id"] == transaction_id and not tx.get("refunded", False):
+            found = True
+
+            if tx["type"] == "coins":
+                coins_returned = tx["coins"]
+
+                if can_spend(user_id, coins_returned):
+                    spend_balance(user_id, coins_returned)
+                    tx["refunded"] = True
+                    tx["refunded_at"] = datetime.now().isoformat()
+                    user_donations[user_id]["total_coins"] -= coins_returned
+                    user_donations[user_id]["total_stars"] -= tx["stars"]
+
+                    try:
+                        # Возвращаем звёзды через Telegram
+                        await bot.refund_star_payment(
+                            user_id=user_id,
+                            telegram_payment_charge_id=transaction_id
+                        )
+                        refund_message = f"✅ Звёзды ({tx['stars']} ⭐) возвращены на ваш счёт!"
+                    except Exception as e:
+                        logger.error(f"Ошибка возврата звёзд: {e}")
+                        refund_message = f"⚠️ Ошибка возврата звёзд. Обратитесь к администратору с кодом: {transaction_id}"
+
+                    await message.answer(
+                        f"✅ <b>ВОЗВРАТ ОФОРМЛЕН!</b>\n\n"
+                        f"Транзакция: <code>{transaction_id}</code>\n"
+                        f"Возвращено звёзд: {tx['stars']}\n"
+                        f"Списано коинов: {coins_returned:,}\n"
+                        f"Новый баланс: {format_balance(user_id)}\n\n"
+                        f"{refund_message}",
+                        reply_markup=get_main_reply_keyboard()
+                    )
+                    save_data()
+                else:
+                    await message.answer(
+                        "❌ <b>НЕДОСТАТОЧНО КОИНОВ ДЛЯ ВОЗВРАТА!</b>\n\n"
+                        f"Нужно: {coins_returned:,} коинов\n"
+                        f"У вас: {format_balance(user_id)}\n\n"
+                        "Потратьте меньше коинов и попробуйте снова.",
+                        reply_markup=get_main_reply_keyboard()
+                    )
+
+            elif tx["type"] in ["elite", "deluxe"]:
+                if user_premium[user_id]["type"] == tx["type"]:
+                    user_premium[user_id]["type"] = None
+                    tx["refunded"] = True
+                    tx["refunded_at"] = datetime.now().isoformat()
+                    user_donations[user_id]["total_stars"] -= tx["stars"]
+
+                    try:
+                        await bot.refund_star_payment(
+                            user_id=user_id,
+                            telegram_payment_charge_id=transaction_id
+                        )
+                        refund_message = f"✅ Звёзды ({tx['stars']} ⭐) возвращены на ваш счёт!"
+                    except Exception as e:
+                        logger.error(f"Ошибка возврата звёзд: {e}")
+                        refund_message = f"⚠️ Ошибка возврата звёзд. Обратитесь к администратору с кодом: {transaction_id}"
+
+                    status_name = "Элит" if tx["type"] == "elite" else "Делюкс"
+                    await message.answer(
+                        f"✅ <b>ВОЗВРАТ ОФОРМЛЕН!</b>\n\n"
+                        f"Транзакция: <code>{transaction_id}</code>\n"
+                        f"Возвращено звёзд: {tx['stars']}\n"
+                        f"Статус '{status_name}' снят\n\n"
+                        f"{refund_message}",
+                        reply_markup=get_main_reply_keyboard()
+                    )
+                    save_data()
+                else:
+                    await message.answer(
+                        "❌ <b>НЕВОЗМОЖНО ВЕРНУТЬ СТАТУС!</b>\n\n"
+                        "Статус был изменен или уже возвращен.",
+                        reply_markup=get_main_reply_keyboard()
+                    )
+            break
+
+    if not found:
+        await message.answer(
+            "❌ <b>ТРАНЗАКЦИЯ НЕ НАЙДЕНА ИЛИ УЖЕ ВОЗВРАЩЕНА!</b>\n\n"
+            "Проверьте код транзакции в /donate_history",
+            reply_markup=get_main_reply_keyboard()
+        )
+
+
 @dp.pre_checkout_query()
 async def pre_checkout_handler(pre_checkout_query: PreCheckoutQuery):
     invoice_id = pre_checkout_query.invoice_payload
@@ -1061,6 +1207,7 @@ async def successful_payment_handler(message: Message):
 
     payment = message.successful_payment
     invoice_id = payment.invoice_payload
+    stars = payment.total_amount
 
     if invoice_id not in pending_invoices:
         await message.answer("❌ Ошибка: счет не найден")
@@ -1073,21 +1220,25 @@ async def successful_payment_handler(message: Message):
         add_balance(user_id, coins)
         add_xp(user_id, coins // 100)
 
-        user_donations[user_id]["total_stars"] += invoice_data["stars"]
+        user_donations[user_id]["total_stars"] += stars
         user_donations[user_id]["total_coins"] += coins
         user_donations[user_id]["transactions"].append({
             "id": payment.telegram_payment_charge_id,
+            "invoice_id": invoice_id,
             "type": "coins",
-            "stars": invoice_data["stars"],
+            "stars": stars,
             "coins": coins,
             "timestamp": datetime.now().isoformat(),
             "refunded": False
         })
 
         await message.answer(
-            f"✅ ОПЛАТА УСПЕШНА!\n\n"
+            f"✅ <b>ОПЛАТА УСПЕШНА!</b>\n\n"
+            f"ID: <code>{payment.telegram_payment_charge_id}</code>\n"
+            f"Звезд: {stars}\n"
             f"Получено коинов: {coins:,}\n"
-            f"Баланс: {format_balance(user_id)}",
+            f"Баланс: {format_balance(user_id)}\n\n"
+            f"Сохраните ID транзакции для возврата звёзд!",
             reply_markup=get_main_reply_keyboard()
         )
 
@@ -1098,18 +1249,21 @@ async def successful_payment_handler(message: Message):
             "purchased_at": datetime.now().isoformat()
         }
 
-        user_donations[user_id]["total_stars"] += invoice_data["stars"]
+        user_donations[user_id]["total_stars"] += stars
         user_donations[user_id]["transactions"].append({
             "id": payment.telegram_payment_charge_id,
+            "invoice_id": invoice_id,
             "type": "elite",
-            "stars": invoice_data["stars"],
+            "stars": stars,
             "timestamp": datetime.now().isoformat(),
             "refunded": False
         })
 
         await message.answer(
-            f"✨ ПОЗДРАВЛЯЕМ!\n\n"
-            f"Вам выдан статус ЭЛИТ навсегда!",
+            f"✨ <b>ПОЗДРАВЛЯЕМ!</b>\n\n"
+            f"ID: <code>{payment.telegram_payment_charge_id}</code>\n"
+            f"Вам выдан статус ЭЛИТ навсегда!\n\n"
+            f"Сохраните ID транзакции для возврата звёзд!",
             reply_markup=get_main_reply_keyboard()
         )
 
@@ -1120,18 +1274,21 @@ async def successful_payment_handler(message: Message):
             "purchased_at": datetime.now().isoformat()
         }
 
-        user_donations[user_id]["total_stars"] += invoice_data["stars"]
+        user_donations[user_id]["total_stars"] += stars
         user_donations[user_id]["transactions"].append({
             "id": payment.telegram_payment_charge_id,
+            "invoice_id": invoice_id,
             "type": "deluxe",
-            "stars": invoice_data["stars"],
+            "stars": stars,
             "timestamp": datetime.now().isoformat(),
             "refunded": False
         })
 
         await message.answer(
-            f"💎 ПОЗДРАВЛЯЕМ!\n\n"
-            f"Вам выдан статус ДЕЛЮКС навсегда!",
+            f"💎 <b>ПОЗДРАВЛЯЕМ!</b>\n\n"
+            f"ID: <code>{payment.telegram_payment_charge_id}</code>\n"
+            f"Вам выдан статус ДЕЛЮКС навсегда!\n\n"
+            f"Сохраните ID транзакции для возврата звёзд!",
             reply_markup=get_main_reply_keyboard()
         )
 
@@ -1150,8 +1307,11 @@ async def cmd_createpromo(message: Message):
     args = message.text.split()
     if len(args) < 4:
         await message.answer(
-            "🎟️ СОЗДАНИЕ ПРОМОКОДА:\n\n"
-            "/createpromo <m/u> <сумма> <кол-во> <код>"
+            "🎟️ <b>СОЗДАНИЕ ПРОМОКОДА</b>\n\n"
+            "/createpromo <m/u> <сумма> <кол-во> <код>\n\n"
+            "m - монеты\n"
+            "u - ускорители\n\n"
+            "Пример: /createpromo m 1000 10 GIFT2024"
         )
         return
 
@@ -1185,9 +1345,12 @@ async def cmd_createpromo(message: Message):
     }
 
     await message.answer(
-        f"✅ Промокод создан!\n\nКод: {promo_code}\n"
-        f"Тип: {'Монеты' if promo_type == 'm' else 'Ускорители'}\n"
-        f"Сумма: {amount:,}\nАктиваций: {activations}"
+        f"✅ <b>Промокод создан!</b>\n\n"
+        f"Код: <code>{promo_code}</code>\n"
+        f"Тип: {'💰 Монеты' if promo_type == 'm' else '⚡ Ускорители'}\n"
+        f"Сумма: {amount:,}\n"
+        f"Активаций: {activations}",
+        reply_markup=get_main_reply_keyboard()
     )
 
     save_data()
@@ -1369,10 +1532,11 @@ async def cmd_chance(message: Message):
         }
 
         await message.answer(
-            f"✅ НАСТРОЙКИ МИНИ-ИГРЫ\n\n"
+            f"✅ <b>НАСТРОЙКИ МИНИ-ИГРЫ</b>\n\n"
             f"• Сложность: {level}\n"
             f"• Значение: {chance}%\n"
-            f"• Мин на поле: {mines}"
+            f"• Мин на поле: {mines}",
+            reply_markup=get_main_reply_keyboard()
         )
 
         save_data()
